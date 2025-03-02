@@ -1,3 +1,10 @@
+// 检查当前页面是否为DLsite，如果不是则提示跳转
+if (!window.location.hostname.includes("dlsite.com")) {
+    if (confirm("当前网页不是DLsite页面，是否自动跳转到DLsite购买页面？")) {
+        window.location.href = "https://www.dlsite.com/maniax/mypage/userbuy";
+    }
+}
+
 // 在脚本最前面添加渐变色标题
 console.log("%cDLsite购买历史统计", "font-size: 24px; font-weight: bold; color: transparent; background-image: linear-gradient(to right, #ff6347, #ff1493, #8a2be2, #32cd32); -webkit-background-clip: text;");
 
