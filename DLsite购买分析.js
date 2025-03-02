@@ -582,7 +582,7 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
   }
   
   styledLog("★ 本脚本由凛遥crush修改制作 ★\n请在GitHub上为本项目点击 Star，谢谢！", "font-size: 18px; font-weight: bold; color: #ffffff; background: #333333; padding: 5px; border-radius: 5px;");
-  styledLog("★ 项目地址：https://github.com/linyaocrush/DLsite-userbuy ★", "font-size: 18px; font-weight: bold; color: #ffffff; background: #333333; padding: 5px; border-radius: 5px;");
+  styledLog("★ 项目地址：https://github.com/linyaocrush/DLsite-Purchase-Analyzer ★", "font-size: 18px; font-weight: bold; color: #ffffff; background: #333333; padding: 5px; border-radius: 5px;");
   
   if (errorLogs.length > 0) {
     styledLog("⚠️ 错误日志记录：", "color: red; font-weight: bold;");
