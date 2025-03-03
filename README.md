@@ -209,22 +209,189 @@ graph TD
 
 ---
 
-## 📜 实现架构
+## 🏗️ 技术架构详解
+
+### 系统分层架构
+```mermaid
+graph TB
+    subgraph UI层
+        A[可视化组件] --> A1[Chart.js 图表]
+        A --> A2[GSAP 动画]
+        A --> A3[自定义模态系统]
+        A --> A4[可拖拽容器]
+    end
+    
+    subgraph 数据层
+        B[核心逻辑] --> B1[Fetch API]
+        B --> B2[DOM解析器]
+        B --> B3[并发控制器]
+        B --> B4[数据清洗器]
+    end
+    
+    subgraph 持久层
+        C[数据输出] --> C1[Blob 存储]
+        C --> C2[FileSaver.js]
+        C --> C3[Console.table]
+    end
+    
+    subgraph 工具层
+        D[辅助模块] --> D1[进度管理器]
+        D --> D2[错误收集器]
+        D --> D3[汇率转换器]
+        D --> D4[内存清理器]
+    end
+```
+
+### 关键技术栈
+
+#### 核心依赖库
+| 库/技术 | 版本 | 用途 | 关键实现 |
+|---------|------|------|----------|
+| **Chart.js** | 4.4.0 | 数据可视化 | `drawGenreChart()` `drawMakerChart()` |
+| **GSAP** | 3.12.0 | 动画引擎 | `animateModalIn()` `fadeOut()` |
+| **DOMParser** | Native | DOM解析 | `processPage()` 数据提取 |
+| **FileSaver** | 2.0.5 | 文件导出 | `exportCSV()` 实现下载 |
+
+#### 原生技术应用
+```markdown
+1. **Web Animation API**  
+   - 实现进度条动态效果
+   - 控制台进度动画（ASCII字符）
+
+2. **CSS Grid/Flex**  
+   - 响应式图表容器布局
+   - 模态窗口自适应布局
+
+3. **ResizeObserver**  
+   - 监听图表窗口缩放事件
+   - 动态调整Canvas画布尺寸
+
+4. **Proxy API**  
+   - 全局状态管理（错误日志/图表类型状态）
+```
+
+### 关键模块实现
+
+#### 1. 并发控制系统
+```javascript
+// 最大并行数控制
+const MAX_CONCURRENT = 5;
+let activePromises = 0;
+
+async function controlledFetch(url) {
+  while (activePromises >= MAX_CONCURRENT) {
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+  activePromises++;
+  try {
+    return await fetch(url);
+  } finally {
+    activePromises--;
+  }
+}
+```
+
+#### 2. 内存管理机制
+```javascript
+// 智能清理策略
+const memoryWatcher = {
+  threshold: 0.8, // 内存使用阈值
+  cleanup() {
+    if (performance.memory.usedJSHeapSize / 
+        performance.memory.jsHeapSizeLimit > this.threshold) {
+      this.forceCleanup();
+    }
+  },
+  forceCleanup() {
+    genreChartObj?.destroy();
+    makerChartObj?.destroy();
+    URL.revokeObjectURL(blobCache);
+  }
+};
+
+// 每60秒检测一次
+setInterval(() => memoryWatcher.cleanup(), 60000);
+```
+
+#### 3. 动画系统架构
 ```mermaid
 graph LR
-    A[UI层] --> B[控制台美化]
-    A --> C[模态窗口系统]
-    B --> D[进度条管理]
-    C --> E[图表容器]
-    
-    F[逻辑层] --> G[数据爬取]
-    G --> H[DOM解析]
-    H --> I[数据清洗]
-    I --> J[图表渲染]
-    
-    K[持久层] --> L[CSV生成]
-    L --> M[Blob存储]
-    M --> N[文件下载]
+    A[动画触发] --> B{GSAP可用?}
+    B -->|是| C[使用GSAP Timeline]
+    B -->|否| D[原生Web Animations]
+    C --> E[贝塞尔曲线缓动]
+    D --> F[CSS Transitions]
+    E --> G[复合动画]
+    F --> G
+    G --> H[回调队列]
+```
+
+### 性能优化策略
+
+#### 数据抓取优化
+```markdown
+1. **分页预加载**  
+   - 使用 `Promise.allSettled()` 并行请求
+   - 动态调整并发数（根据网络延迟）
+
+2. **DOM缓存**  
+   - 复用已解析的文档对象
+   - 选择器结果缓存池
+
+3. **增量渲染**  
+   - 分批次处理DOM节点（每50ms处理10个节点）
+```
+
+#### 图表优化
+```javascript
+// Canvas渲染优化
+Chart.defaults.animation = false; // 禁用默认动画
+Chart.defaults.datasets.bar.barThickness = 25; // 固定柱宽
+Chart.defaults.elements.point.radius = 3; // 优化数据点
+
+// 智能重绘策略
+function debouncedRedraw() {
+  let isRendering = false;
+  return () => {
+    if (!isRendering) {
+      requestAnimationFrame(() => {
+        genreChartObj?.update();
+        makerChartObj?.update();
+        isRendering = false;
+      });
+      isRendering = true;
+    }
+  };
+}
+```
+
+### 安全机制
+```markdown
+1. **沙盒模式**  
+   - 使用 `Proxy` 封装全局变量
+   - 限制内存操作权限
+
+2. **输入验证**  
+   ```javascript
+   // 汇率输入验证
+   const validateExchangeRate = (input) => {
+     return /^0\.0\d{1,5}$/.test(input) && 
+            parseFloat(input) > 0;
+   };
+   ```
+
+3. **CORS处理**  
+   - 动态添加 `no-cors` 模式
+   - 失败请求自动重试（指数退避算法）
+```
+
+---
+
+> 📌 **架构设计原则**  
+> 1. 模块化设计 - 每个功能模块最大代码行数≤200  
+> 2. 内存安全 - 对象销毁后自动触发GC  
+> 3. 渐进增强 - 核心功能不依赖第三方库  
+> 4. 响应式优先 - 所有组件适配移动端触控
 ```
 
 ---
