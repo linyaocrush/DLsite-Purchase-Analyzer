@@ -9,16 +9,15 @@
     style.textContent = `
       .modal-overlay {
         position: fixed;
-        top:0; left:0;
-        width:100%;
-        height:100%;
+        top: 0; left: 0;
+        width: 100%;
+        height: 100%;
         background: rgba(0,0,0,0.5);
         display: flex;
         align-items: center;
         justify-content: center;
         z-index: 100000;
         opacity: 0;
-        transition: opacity 0.3s ease;
       }
       .modal-container {
         background: #fff;
@@ -26,6 +25,8 @@
         border-radius: 8px;
         max-width: 500px;
         text-align: center;
+        transform: scale(0.8);
+        opacity: 0;
       }
       .progress-bar {
         position: fixed;
@@ -42,21 +43,49 @@
         height: 100%;
         width: 0%;
         background: linear-gradient(to right, #4caf50, #81c784);
-        transition: width 0.3s;
+        transition: width 0.2s;
       }
       .chart-container {
-        position: fixed;
         background: #fff;
         border: 2px solid #ccc;
         border-radius: 8px;
-        padding: 5px;
-        overflow: auto;
+        overflow: hidden;
         z-index: 10000;
+      }
+      .drag-button {
+        position: absolute;
+        top: 5px;
+        left: 5px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #007BFF;
+        border: 2px solid white;
+        cursor: grab;
+        user-select: none;
+        z-index: 100;
+        text-align: center;
+        line-height: 24px;
+        color: white;
+        font-size: 16px;
+      }
+      .chart-content {
+        width: 100%;
+        height: calc(100% - 30px);
+        margin-top: 30px;
       }
       .btn {
         margin: 5px;
         padding: 5px 10px;
         cursor: pointer;
+        border: none;
+        background: #4caf50;
+        color: #fff;
+        border-radius: 4px;
+        transition: background 0.2s;
+      }
+      .btn:hover {
+        background: #45a049;
       }
       .md-modal {
         background: #fff;
@@ -67,6 +96,8 @@
         max-height: 80%;
         overflow: auto;
         box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        transform: scale(0.8);
+        opacity: 0;
       }
       .md-modal h2 {
         margin-top: 0;
@@ -99,6 +130,9 @@
   var timelineChartObj = null;
   var cumulativeChartObj = null;
   var errorLogs = [];
+  // 定义图表类型切换的全局变量，初始均为柱状图
+  var genreChartType = 'bar';
+  var makerChartType = 'bar';
   
   // -------------------------
   // 通用工具函数
@@ -107,6 +141,7 @@
     const logFns = { log: console.log, warn: console.warn, error: console.error, info: console.info };
     logFns[type](`%c${message}`, style);
   }
+  window.styledLog = styledLog;
   
   function displayTable(data, headers) {
     const tableData = data.map(row => {
@@ -132,35 +167,136 @@
     document.getElementById("innerProgressBar").style.width = progress + "%";
   }
   
-  function createChartContainer(id, top, left, width, height) {
+  // -------------------------
+  // 创建可拖拽并支持缩放的图表窗口
+  // -------------------------
+  // 在窗口左上角添加一个小圆形按钮作为拖拽手柄，同时创建一个内部内容区域
+  function createChartContainer(id, top, left, width = "500px", height = "400px") {
     let container = document.getElementById(id);
     if (!container) {
       container = document.createElement("div");
       container.id = id;
       container.className = "chart-container";
+      container.style.position = "absolute";
       container.style.top = top;
       container.style.left = left;
       container.style.width = width;
       container.style.height = height;
+      container.style.minWidth = "300px";
+      container.style.minHeight = "250px";
+      container.style.resize = "both";  // 允许缩放
+      container.style.overflow = "hidden";
+      container.style.boxShadow = "0 4px 8px rgba(0,0,0,0.3)";
+      container.style.border = "1px solid #ccc";
       document.body.appendChild(container);
+      
+      // 添加一个圆形拖拽按钮到左上角
+      const dragButton = document.createElement("div");
+      dragButton.className = "drag-button";
+      dragButton.innerHTML = "≡";
+      container.appendChild(dragButton);
+      
+      // 创建专门用于显示图表内容的区域，避免覆盖拖拽按钮
+      const contentDiv = document.createElement("div");
+      contentDiv.className = "chart-content";
+      container.appendChild(contentDiv);
+      
+      // 绑定拖拽事件到拖拽按钮
+      makeDraggable(container, dragButton);
     }
     return container;
   }
   
   // -------------------------
-  // 淡入淡出动画
+  // 让窗口可拖拽（绑定到指定拖拽手柄上）
   // -------------------------
-  function fadeIn(element) {
-    element.style.opacity = 0;
-    setTimeout(() => { element.style.opacity = 1; }, 10);
-  }
-  function fadeOut(element, callback) {
-    element.style.opacity = 0;
-    setTimeout(callback, 300);
+  function makeDraggable(element, handle) {
+    let offsetX, offsetY, isDragging = false;
+  
+    handle.addEventListener("mousedown", (e) => {
+      e.preventDefault();  // 阻止默认文字选择
+      isDragging = true;
+      offsetX = e.clientX - element.getBoundingClientRect().left;
+      offsetY = e.clientY - element.getBoundingClientRect().top;
+      handle.style.cursor = "grabbing";
+    });
+  
+    document.addEventListener("mousemove", (e) => {
+      if (!isDragging) return;
+      let newX = e.clientX - offsetX;
+      let newY = e.clientY - offsetY;
+      newX = Math.max(0, Math.min(window.innerWidth - element.offsetWidth, newX));
+      newY = Math.max(0, Math.min(window.innerHeight - element.offsetHeight, newY));
+      element.style.left = newX + "px";
+      element.style.top = newY + "px";
+    });
+  
+    document.addEventListener("mouseup", () => {
+      isDragging = false;
+      handle.style.cursor = "grab";
+    });
   }
   
   // -------------------------
-  // 统一创建模态窗口（抽离公共代码）
+  // 动画函数：使用 gsap（若存在）或 CSS 过渡
+  // -------------------------
+  function fadeIn(element) {
+    if (typeof gsap !== "undefined") {
+      gsap.fromTo(element, { opacity: 0 }, { opacity: 1, duration: 0.2, ease: "power2.out" });
+    } else {
+      element.style.opacity = 0;
+      element.style.transition = "opacity 0.2s ease-out";
+      setTimeout(() => { element.style.opacity = 1; }, 10);
+    }
+  }
+  function fadeOut(element, callback) {
+    if (typeof gsap !== "undefined") {
+      gsap.to(element, { opacity: 0, duration: 0.2, ease: "power2.in", onComplete: callback });
+    } else {
+      element.style.opacity = 0;
+      setTimeout(callback, 200);
+    }
+  }
+  function animateModalIn(element) {
+    if (typeof gsap !== "undefined") {
+      gsap.fromTo(element, { scale: 0.8, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.2, ease: "back.out(1.7)" });
+    } else {
+      element.style.transform = "scale(0.8)";
+      element.style.opacity = "0";
+      element.style.transition = "transform 0.2s ease-out, opacity 0.2s ease-out";
+      setTimeout(() => {
+        element.style.transform = "scale(1)";
+        element.style.opacity = "1";
+      }, 10);
+    }
+  }
+  function animateModalOut(element, callback) {
+    if (typeof gsap !== "undefined") {
+      gsap.to(element, { scale: 0.8, opacity: 0, duration: 0.2, ease: "back.in(1.7)", onComplete: callback });
+    } else {
+      element.style.transform = "scale(1)";
+      element.style.opacity = "1";
+      element.style.transition = "transform 0.2s ease-in, opacity 0.2s ease-in";
+      setTimeout(() => {
+        element.style.transform = "scale(0.8)";
+        element.style.opacity = "0";
+        setTimeout(callback, 200);
+      }, 10);
+    }
+  }
+  
+  // 统一关闭模态窗口：先动画 modal，再动画 overlay，最后移除节点
+  function closeModal(overlay, modal, callback) {
+    animateModalOut(modal, () => {
+      fadeOut(overlay, () => {
+        document.body.removeChild(overlay);
+        if(callback) callback();
+      });
+    });
+  }
+  
+  // -------------------------
+  // 统一创建模态窗口
   // -------------------------
   function createModal(maxWidth) {
     const overlay = document.createElement("div");
@@ -171,6 +307,7 @@
     modal.style.maxWidth = maxWidth || "500px";
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
+    animateModalIn(modal);
     return { overlay, modal };
   }
   
@@ -185,9 +322,7 @@
         const btn = document.createElement("button");
         btn.textContent = opt.label;
         btn.className = "btn";
-        btn.addEventListener("click", () => {
-          fadeOut(overlay, () => { document.body.removeChild(overlay); resolve(opt.value); });
-        });
+        btn.addEventListener("click", () => { closeModal(overlay, modal, () => { resolve(opt.value); }); });
         btnContainer.appendChild(btn);
       });
       modal.appendChild(btnContainer);
@@ -203,7 +338,7 @@
       const btn = document.createElement("button");
       btn.textContent = "确定";
       btn.className = "btn";
-      btn.addEventListener("click", () => { fadeOut(overlay, () => { document.body.removeChild(overlay); resolve(); }); });
+      btn.addEventListener("click", () => { closeModal(overlay, modal, resolve); });
       modal.appendChild(btn);
     });
   }
@@ -215,7 +350,8 @@
       msgDiv.innerHTML = message;
       modal.appendChild(msgDiv);
       const input = document.createElement("input");
-      input.type = "text"; input.value = defaultValue;
+      input.type = "text"; 
+      input.value = defaultValue;
       input.style.width = "80%";
       input.style.marginTop = "15px";
       input.style.padding = "5px";
@@ -228,8 +364,8 @@
       const cancelBtn = document.createElement("button");
       cancelBtn.textContent = "取消";
       cancelBtn.className = "btn";
-      okBtn.addEventListener("click", () => { fadeOut(overlay, () => { document.body.removeChild(overlay); resolve(input.value); }); });
-      cancelBtn.addEventListener("click", () => { fadeOut(overlay, () => { document.body.removeChild(overlay); resolve(null); }); });
+      okBtn.addEventListener("click", () => { closeModal(overlay, modal, () => { resolve(input.value); }); });
+      cancelBtn.addEventListener("click", () => { closeModal(overlay, modal, () => { resolve(null); }); });
       btnContainer.appendChild(okBtn);
       btnContainer.appendChild(cancelBtn);
       modal.appendChild(btnContainer);
@@ -250,8 +386,8 @@
       const cancelBtn = document.createElement("button");
       cancelBtn.textContent = "取消";
       cancelBtn.className = "btn";
-      okBtn.addEventListener("click", () => { fadeOut(overlay, () => { document.body.removeChild(overlay); resolve(true); }); });
-      cancelBtn.addEventListener("click", () => { fadeOut(overlay, () => { document.body.removeChild(overlay); resolve(false); }); });
+      okBtn.addEventListener("click", () => { closeModal(overlay, modal, () => { resolve(true); }); });
+      cancelBtn.addEventListener("click", () => { closeModal(overlay, modal, () => { resolve(false); }); });
       btnContainer.appendChild(okBtn);
       btnContainer.appendChild(cancelBtn);
       modal.appendChild(btnContainer);
@@ -299,56 +435,115 @@
   }
   
   // -------------------------
-  // 图表绘制函数
+  // 图表绘制函数：作品类型统计（仅在 detailMode 为 true 时显示）
   // -------------------------
   function drawGenreChart(filteredGenreCount) {
-    const container = createChartContainer("chartContainer1", "0", "0", "50vw", "50vh");
-    container.innerHTML = `<h3 style="text-align:center; margin: 0;">作品类型统计</h3>`;
+    const container = createChartContainer("chartContainer1", "100px", "100px");
+    const contentDiv = container.querySelector(".chart-content");
+    contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">
+      作品类型统计 
+      <button id="toggleGenreChartBtn" class="btn" style="margin-left: 10px; font-size: 12px;">
+        切换为${genreChartType === 'bar' ? '饼状图' : '柱状图'}
+      </button>
+    </h3>`;
     const canvas = document.createElement("canvas");
     canvas.style.width = "100%";
     canvas.style.height = "calc(100% - 30px)";
-    container.appendChild(canvas);
+    contentDiv.appendChild(canvas);
     const ctx = canvas.getContext("2d");
     if (genreChartObj) { genreChartObj.destroy(); }
+    
+    let backgroundColors, borderColors, options;
+    if (genreChartType === 'pie') {
+      backgroundColors = filteredGenreCount.map((_, i) => `hsl(${(i * 360 / filteredGenreCount.length)}, 70%, 70%)`);
+      borderColors = filteredGenreCount.map((_, i) => `hsl(${(i * 360 / filteredGenreCount.length)}, 70%, 50%)`);
+      options = {};
+    } else {
+      backgroundColors = "rgba(75, 192, 192, 0.6)";
+      borderColors = "rgba(75, 192, 192, 1)";
+      options = { scales: { y: { beginAtZero: true } } };
+    }
+    
     genreChartObj = new Chart(ctx, {
-      type: 'bar',
+      type: genreChartType,
       data: {
         labels: filteredGenreCount.map(item => item[0]),
         datasets: [{
-          label: '作品数目',
+          label: "作品数目",
           data: filteredGenreCount.map(item => item[1]),
-          backgroundColor: "rgba(75, 192, 192, 0.6)",
-          borderColor: "rgba(75, 192, 192, 1)",
+          backgroundColor: backgroundColors,
+          borderColor: borderColors,
           borderWidth: 1
         }]
       },
-      options: { scales: { y: { beginAtZero: true } } }
+      options: options
     });
+    
+    setTimeout(() => {
+      const btn = document.getElementById("toggleGenreChartBtn");
+      if (btn) {
+        btn.addEventListener("click", () => {
+          genreChartType = genreChartType === 'bar' ? 'pie' : 'bar';
+          drawGenreChart(filteredGenreCount);
+        });
+      }
+    }, 0);
   }
   
+  // -------------------------
+  // 图表绘制函数：制作组统计（添加切换按钮）
+  // -------------------------
   function drawMakerChart(filteredMakerCount) {
-    const container = createChartContainer("chartContainer2", "0", "50vw", "50vw", "50vh");
-    container.innerHTML = `<h3 style="text-align:center; margin: 0;">制作组统计</h3>`;
+    const container = createChartContainer("chartContainer2", "100px", "650px");
+    const contentDiv = container.querySelector(".chart-content");
+    contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">
+      制作组统计 
+      <button id="toggleMakerChartBtn" class="btn" style="margin-left: 10px; font-size: 12px;">
+        切换为${makerChartType === 'bar' ? '饼状图' : '柱状图'}
+      </button>
+    </h3>`;
     const canvas = document.createElement("canvas");
     canvas.style.width = "100%";
     canvas.style.height = "calc(100% - 30px)";
-    container.appendChild(canvas);
+    contentDiv.appendChild(canvas);
     const ctx = canvas.getContext("2d");
     if (makerChartObj) { makerChartObj.destroy(); }
+    
+    let backgroundColors, borderColors, options;
+    if (makerChartType === 'pie') {
+      backgroundColors = filteredMakerCount.map((_, i) => `hsl(${(i * 360 / filteredMakerCount.length)}, 70%, 70%)`);
+      borderColors = filteredMakerCount.map((_, i) => `hsl(${(i * 360 / filteredMakerCount.length)}, 70%, 50%)`);
+      options = {};
+    } else {
+      backgroundColors = "rgba(153, 102, 255, 0.6)";
+      borderColors = "rgba(153, 102, 255, 1)";
+      options = { scales: { y: { beginAtZero: true } } };
+    }
+    
     makerChartObj = new Chart(ctx, {
-      type: 'bar',
+      type: makerChartType,
       data: {
         labels: filteredMakerCount.map(item => item[0]),
         datasets: [{
-          label: '作品数目',
+          label: "作品数目",
           data: filteredMakerCount.map(item => item[1]),
-          backgroundColor: "rgba(153, 102, 255, 0.6)",
-          borderColor: "rgba(153, 102, 255, 1)",
+          backgroundColor: backgroundColors,
+          borderColor: borderColors,
           borderWidth: 1
         }]
       },
-      options: { scales: { y: { beginAtZero: true } } }
+      options: options
     });
+    
+    setTimeout(() => {
+      const btn = document.getElementById("toggleMakerChartBtn");
+      if (btn) {
+        btn.addEventListener("click", () => {
+          makerChartType = makerChartType === 'bar' ? 'pie' : 'bar';
+          drawMakerChart(filteredMakerCount);
+        });
+      }
+    }, 0);
   }
   
   function drawTimelineChart(works) {
@@ -358,12 +553,13 @@
     });
     const sortedDates = Object.keys(groups).sort();
     const counts = sortedDates.map(date => groups[date]);
-    const container = createChartContainer("chartContainer3", "50vh", "0", "50vw", "50vh");
-    container.innerHTML = `<h3 style="text-align:center; margin: 0;">每日购买数量</h3>`;
+    const container = createChartContainer("chartContainer3", "550px", "100px");
+    const contentDiv = container.querySelector(".chart-content");
+    contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">每日购买数量</h3>`;
     const canvas = document.createElement("canvas");
     canvas.style.width = "100%";
     canvas.style.height = "calc(100% - 30px)";
-    container.appendChild(canvas);
+    contentDiv.appendChild(canvas);
     const ctx = canvas.getContext("2d");
     if (timelineChartObj) { timelineChartObj.destroy(); }
     timelineChartObj = new Chart(ctx, {
@@ -371,7 +567,7 @@
       data: {
         labels: sortedDates,
         datasets: [{
-          label: '每日购买数量',
+          label: "每日购买数量",
           data: counts,
           fill: false,
           borderColor: 'rgba(54, 162, 235, 1)',
@@ -397,12 +593,13 @@
     let cumulative = [];
     let total = 0;
     sortedDates.forEach(date => { total += groups[date]; cumulative.push(total); });
-    const container = createChartContainer("chartContainer4", "50vh", "50vw", "50vw", "50vh");
-    container.innerHTML = `<h3 style="text-align:center; margin: 0;">累计消费金额（日元）</h3>`;
+    const container = createChartContainer("chartContainer4", "550px", "650px");
+    const contentDiv = container.querySelector(".chart-content");
+    contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">累计消费金额（日元）</h3>`;
     const canvas = document.createElement("canvas");
     canvas.style.width = "100%";
     canvas.style.height = "calc(100% - 30px)";
-    container.appendChild(canvas);
+    contentDiv.appendChild(canvas);
     const ctx = canvas.getContext("2d");
     if (cumulativeChartObj) { cumulativeChartObj.destroy(); }
     cumulativeChartObj = new Chart(ctx, {
@@ -410,7 +607,7 @@
       data: {
         labels: sortedDates,
         datasets: [{
-          label: '累计消费金额',
+          label: "累计消费金额",
           data: cumulative,
           fill: true,
           borderColor: 'rgba(255, 159, 64, 1)',
@@ -427,7 +624,24 @@
     });
   }
   
+  // -------------------------
+  // 简化美化的控制台进度显示函数
+  // -------------------------
+  function updatePageProgress(pageNum, totalPages) {
+    const progress = Math.floor((pageNum / totalPages) * 100);
+    const barLength = 20;
+    const filledLength = Math.round((progress / 100) * barLength);
+    const bar = "█".repeat(filledLength) + "░".repeat(barLength - filledLength);
+    console.clear();
+    console.log(
+      `%cFetching page ${pageNum}/${totalPages}: [${bar}] ${progress}%`,
+      "font-size:16px; color: #0066cc; font-weight: bold;"
+    );
+  }
+  
+  // -------------------------
   // 时间轴控制台输出
+  // -------------------------
   function displayTimeline(works) {
     const groups = {};
     works.forEach(work => {
@@ -437,7 +651,7 @@
     const sortedDates = Object.keys(groups).sort();
     console.group("时间轴视图");
     sortedDates.forEach(date => {
-      console.groupCollapsed(`日期：${date} （${groups[date].length} 项）`);
+      console.groupCollapsed(`日期：${date} (${groups[date].length} 项)`);
       const timelineData = groups[date].map(work => ({
         "作品名称": work.name,
         "制作组": work.makerName,
@@ -447,33 +661,6 @@
       console.groupEnd();
     });
     console.groupEnd();
-  }
-  
-  // 数据回放动画（每日购买数量逐步展示）
-  function animateTimelineChart(works) {
-    const groups = {};
-    works.forEach(work => {
-      groups[work.date] = (groups[work.date] || 0) + 1;
-    });
-    const sortedDates = Object.keys(groups).sort();
-    const finalCounts = sortedDates.map(date => groups[date]);
-    let animatedCounts = new Array(finalCounts.length).fill(0);
-    if (timelineChartObj) {
-      timelineChartObj.data.labels = sortedDates;
-      timelineChartObj.data.datasets[0].data = animatedCounts;
-      timelineChartObj.update();
-    }
-    let step = 0, steps = 50;
-    const interval = setInterval(() => {
-      step++;
-      animatedCounts = finalCounts.map(count => Math.round(count * (step / steps)));
-      if (timelineChartObj) {
-        timelineChartObj.data.datasets[0].data = animatedCounts;
-        timelineChartObj.update();
-      }
-      if (step >= steps) clearInterval(interval);
-    }, 100);
-    styledLog("数据回放开始……", "color: #0099ff; font-weight: bold;");
   }
   
   // -------------------------
@@ -489,7 +676,7 @@
   }
   
   // -------------------------
-  // 数据抓取及处理（优化并发请求）
+  // 数据抓取及处理
   // -------------------------
   async function processPage(doc, result, detailMode) {
     const trElms = doc.querySelectorAll(".work_list_main tr:not(.item_name)");
@@ -531,7 +718,6 @@
   
   async function fetchAllPages(dlurl, detailMode, updateProgressCallback) {
     let result = { count: 0, totalPrice: 0, works: [], genreCount: new Map(), makerCount: new Map(), eol: [] };
-    // 请求第一页
     const firstPageText = await fetchUrlAsync(dlurl + "1");
     const firstDoc = new DOMParser().parseFromString(firstPageText, "text/html");
     let lastPage = 1;
@@ -576,14 +762,14 @@
       const typeOptionsArr = [
         { label: "0: 全部作品", value: "0" },
         { label: "12: 同人：所有", value: "12" },
-        { label: "2: 同人：全年齢", value: "2" },
+        { label: "2: 同人：全年龄", value: "2" },
         { label: "1: 同人：男性向", value: "1" },
         { label: "3: 同人：女性向", value: "3" },
         { label: "13: 商业游戏：所有", value: "13" },
-        { label: "9: 商业游戏：全年齢", value: "9" },
+        { label: "9: 商业游戏：全年龄", value: "9" },
         { label: "4: 商业游戏：男性向", value: "4" },
         { label: "14: 漫画：所有", value: "14" },
-        { label: "10: 漫画：全年齢", value: "10" },
+        { label: "10: 漫画：全年龄", value: "10" },
         { label: "7: 漫画：男性向", value: "7" },
         { label: "11: 漫画：女性向", value: "11" }
       ];
@@ -610,14 +796,8 @@
       }
     }
     
-    function updatePageProgress(pageNum, totalPages) {
-      const progress = Math.floor((pageNum / totalPages) * 100);
-      updateProgressBar(progress);
-      styledLog(`📄 正在获取第 ${pageNum}/${totalPages} 页 [${'='.repeat(progress/2)}${' '.repeat(50 - progress/2)}] ${progress}%`, "color: #0066cc; font-weight: bold;");
-    }
-    
     console.group("📄 页面抓取进度");
-    const result = await fetchAllPages(dlurl, detailMode, updatePageProgress);
+    const result = await fetchAllPages(dlurl, detailMode, updateProgressBar);
     console.groupEnd();
     
     const excludeResponse = await customPrompt("请输入要排除的最少作品数目（例如输入 3 表示排除数目小于 3 的作品类型）：", "0");
@@ -643,7 +823,10 @@
     ]);
     if (showChart.toLowerCase() === "y") {
       await loadChartJs();
-      drawGenreChart(filteredGenreCount);
+      // 快速模式下（detailMode 为 false）不显示作品类型统计图
+      if (detailMode) {
+        drawGenreChart(filteredGenreCount);
+      }
       drawMakerChart(filteredMakerCount);
       drawTimelineChart(result.works);
       drawCumulativeChart(result.works);
@@ -739,8 +922,15 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
     
     displayTimeline(result.works);
     
-    styledLog("★ 本脚本由凛遥crush修改制作 ★\n请在GitHub上为本项目点击 Star，谢谢！", "font-size: 18px; font-weight: bold; color: #fff; background: #333; padding: 5px; border-radius: 5px;");
-    styledLog("★ 项目地址：https://github.com/linyaocrush/DLsite-Purchase-Analyzer ★", "font-size: 18px; font-weight: bold; color: #fff; background: #333; padding: 5px; border-radius: 5px;");
+    // 美化后的作者信息展示
+    styledLog(
+      "★ 本脚本由 凛遥crush 修改制作 ★\n请在 GitHub 上为本项目点击 Star，谢谢！",
+      "font-size: 20px; font-weight: bold; color: #fff; background: linear-gradient(135deg, #ff7e5f, #feb47b); padding: 10px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);"
+    );
+    styledLog(
+      "★ 项目地址：https://github.com/linyaocrush/DLsite-Purchase-Analyzer ★",
+      "font-size: 20px; font-weight: bold; color: #fff; background: linear-gradient(135deg, #6a11cb, #2575fc); padding: 10px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);"
+    );
     if (errorLogs.length > 0) {
       styledLog("⚠️ 错误日志记录：", "color: red; font-weight: bold;", "error");
       console.error(errorLogs);
@@ -771,12 +961,12 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url; a.download = fileName; a.click();
-      fadeOut(overlay, () => { document.body.removeChild(overlay); });
+      closeModal(overlay, modal);
     });
     const closeBtn = document.createElement("button");
     closeBtn.textContent = "关闭预览";
     closeBtn.className = "btn";
-    closeBtn.addEventListener("click", () => { fadeOut(overlay, () => { document.body.removeChild(overlay); }); });
+    closeBtn.addEventListener("click", () => { closeModal(overlay, modal); });
     btnContainer.appendChild(downloadBtn);
     btnContainer.appendChild(closeBtn);
     modal.appendChild(title);
@@ -784,6 +974,7 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
     modal.appendChild(btnContainer);
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
+    animateModalIn(modal);
   }
   
   // -------------------------
@@ -793,7 +984,7 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
   window.reloadData = async function() { console.clear(); cleanup(); try { await main(); } catch(e) { console.error("reloadData encountered an error:", e); } };
   
   // -------------------------
-  // 程序入口
+  // 程序入口：直接运行
   // -------------------------
   injectStyles();
   (async function(){
