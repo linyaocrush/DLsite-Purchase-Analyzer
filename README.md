@@ -483,4 +483,3 @@ MIT License | 严禁用于商业用途
 
 > 🌐 项目地址：https://github.com/linyaocrush/DLsite-Purchase-Analyzer  
 > 📧 问题反馈：附带控制台错误截图创建Issue
-```
