@@ -5,6 +5,10 @@
 
 ---
 
+## 演示视频
+    https://www.bilibili.com/video/BV1PWRNYNEx9/?vd_source=4f8111998ab89edef0873b0e07ceb6d8
+---
+
 ## 🚀 核心升级亮点
 - **全新可视化系统**：集成 Chart.js 动态图表
 - **增强交互体验**：完全自定义的模态窗口替代原生弹窗
