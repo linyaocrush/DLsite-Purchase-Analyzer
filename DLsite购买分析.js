@@ -51,6 +51,7 @@
         border-radius: 8px;
         overflow: hidden;
         z-index: 10000;
+        position: absolute;
       }
       .drag-button {
         position: absolute;
@@ -73,6 +74,7 @@
         width: 100%;
         height: calc(100% - 30px);
         margin-top: 30px;
+        overflow: auto;
       }
       .btn {
         margin: 5px;
@@ -118,6 +120,35 @@
         margin: 20px 0;
         border-radius: 4px;
       }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 10px;
+      }
+      th, td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: center;
+      }
+      th {
+        background: #f2f2f2;
+      }
+      /* 折叠面板样式 */
+      .collapsible-section {
+        border: 1px solid #ccc;
+        margin-bottom: 10px;
+        border-radius: 4px;
+      }
+      .collapsible-header {
+        margin: 0;
+        padding: 5px 10px;
+        background: #f2f2f2;
+        cursor: pointer;
+        user-select: none;
+      }
+      .collapsible-content {
+        padding: 10px;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -130,12 +161,11 @@
   var timelineChartObj = null;
   var cumulativeChartObj = null;
   var errorLogs = [];
-  // 定义图表类型切换的全局变量，初始均为柱状图
   var genreChartType = 'bar';
   var makerChartType = 'bar';
   
   // -------------------------
-  // 通用工具函数
+  // 通用日志输出
   // -------------------------
   function styledLog(message, style = "", type = "log") {
     const logFns = { log: console.log, warn: console.warn, error: console.error, info: console.info };
@@ -143,15 +173,198 @@
   }
   window.styledLog = styledLog;
   
-  function displayTable(data, headers) {
-    const tableData = data.map(row => {
-      let obj = {};
-      headers.forEach((header, i) => { obj[header] = row[i]; });
-      return obj;
+  // -------------------------
+  // 创建折叠面板（在标题前添加一个箭头指示）
+  // -------------------------
+  function createCollapsibleSection(titleText, contentHtml, collapsed = false) {
+    const section = document.createElement("div");
+    section.className = "collapsible-section";
+    
+    const header = document.createElement("h3");
+    header.className = "collapsible-header";
+    
+    const indicator = document.createElement("span");
+    indicator.style.marginRight = "5px";
+    indicator.textContent = collapsed ? "►" : "▼";
+    
+    header.appendChild(indicator);
+    header.appendChild(document.createTextNode(titleText));
+    
+    const content = document.createElement("div");
+    content.className = "collapsible-content";
+    content.innerHTML = contentHtml;
+    content.style.display = collapsed ? "none" : "block";
+    
+    header.addEventListener("click", () => {
+      if (content.style.display === "none") {
+        content.style.display = "block";
+        indicator.textContent = "▼";
+      } else {
+        content.style.display = "none";
+        indicator.textContent = "►";
+      }
     });
-    console.table(tableData);
+    
+    section.appendChild(header);
+    section.appendChild(content);
+    return section;
   }
   
+  // -------------------------
+  // 创建结果窗口（与数据图窗口类似，可拖拽、缩放，默认尺寸为数据图的2倍）
+  // -------------------------
+  function createResultWindow() {
+    let container = document.getElementById("resultWindow");
+    if (!container) {
+      container = document.createElement("div");
+      container.id = "resultWindow";
+      container.className = "chart-container";
+      // 默认宽 1000px，高 800px
+      container.style.top = "200px";
+      container.style.left = "200px";
+      container.style.width = "1000px";
+      container.style.height = "800px";
+      container.style.minWidth = "300px";
+      container.style.minHeight = "200px";
+      container.style.resize = "both";
+      // 设置容器内自己滚动，而不是整个网页滚动
+      container.style.overflowY = "auto";
+      container.style.overflowX = "hidden";
+      document.body.appendChild(container);
+      
+      const dragButton = document.createElement("div");
+      dragButton.className = "drag-button";
+      dragButton.innerHTML = "≡";
+      container.appendChild(dragButton);
+      
+      const contentDiv = document.createElement("div");
+      contentDiv.className = "chart-content";
+      container.appendChild(contentDiv);
+      
+      makeDraggable(container, dragButton);
+      return contentDiv;
+    }
+    return container.querySelector(".chart-content");
+  }
+  
+  // -------------------------
+  // 将所有统计及相关信息显示到结果窗口中
+  // -------------------------
+  function displayResults(result, exchangeRate, filteredGenreCount, filteredMakerCount) {
+    const contentDiv = createResultWindow();
+    contentDiv.innerHTML = "";
+    
+    const overviewHtml = `
+      <table>
+        <tr>
+          <th>统计项目</th>
+          <th>数量/金额</th>
+        </tr>
+        <tr>
+          <td>购买总数</td>
+          <td>${result.count} 部</td>
+        </tr>
+        <tr>
+          <td>总消费金额</td>
+          <td>${result.totalPrice} 日元 (${(result.totalPrice * exchangeRate).toFixed(2)} 人民币)</td>
+        </tr>
+      </table>
+    `;
+    contentDiv.appendChild(createCollapsibleSection("统计概览", overviewHtml, false));
+    
+    const genreHtml = `
+      <table>
+        <tr>
+          <th>类型</th>
+          <th>作品数目</th>
+        </tr>
+        ${filteredGenreCount.map(([type, count]) => `
+          <tr>
+            <td>${type}</td>
+            <td>${count}</td>
+          </tr>
+        `).join('')}
+      </table>
+    `;
+    contentDiv.appendChild(createCollapsibleSection("各类型作品数排名", genreHtml, false));
+    
+    const makerHtml = `
+      <table>
+        <tr>
+          <th>制作组</th>
+          <th>作品数目</th>
+        </tr>
+        ${filteredMakerCount.map(([maker, count]) => `
+          <tr>
+            <td>${maker}</td>
+            <td>${count}</td>
+          </tr>
+        `).join('')}
+      </table>
+    `;
+    contentDiv.appendChild(createCollapsibleSection("各制作组作品数排名", makerHtml, false));
+    
+    const eolHtml = result.eol.length > 0 ? `
+      <table>
+        <tr>
+          <th>购买日期</th>
+          <th>制作组</th>
+          <th>作品名称</th>
+          <th>价格</th>
+        </tr>
+        ${result.eol.map(eol => `
+          <tr>
+            <td>${eol.date}</td>
+            <td>${eol.makerName}</td>
+            <td>${eol.name}</td>
+            <td>${eol.price} 日元</td>
+          </tr>
+        `).join('')}
+      </table>
+    ` : `<p>暂无已下架作品</p>`;
+    contentDiv.appendChild(createCollapsibleSection("已下架作品", eolHtml, false));
+    
+    let timelineHtml = "";
+    const timelineGroups = {};
+    result.works.forEach(work => {
+      if(!timelineGroups[work.date]) timelineGroups[work.date] = [];
+      timelineGroups[work.date].push(work);
+    });
+    const sortedDates = Object.keys(timelineGroups).sort();
+    sortedDates.forEach(date => {
+      let tableHtml = `<table>
+         <tr>
+            <th>作品名称</th>
+            <th>制作组</th>
+            <th>价格</th>
+         </tr>`;
+      timelineGroups[date].forEach(work => {
+         tableHtml += `<tr>
+           <td>${work.name}</td>
+           <td>${work.makerName}</td>
+           <td>${work.price} 日元</td>
+         </tr>`;
+      });
+      tableHtml += `</table>`;
+      timelineHtml += `<div><strong>${date} (${timelineGroups[date].length} 项)</strong>${tableHtml}</div>`;
+    });
+    contentDiv.appendChild(createCollapsibleSection("时间轴视图", timelineHtml, true));
+    
+    const authorHtml = `
+      <p>★ 本脚本由 凛遥crush 修改制作 ★</p>
+      <p>★ 项目地址：<a href="https://github.com/linyaocrush/DLsite-Purchase-Analyzer" target="_blank">https://github.com/linyaocrush/DLsite-Purchase-Analyzer</a></p>
+    `;
+    contentDiv.appendChild(createCollapsibleSection("作者信息", authorHtml, false));
+    
+    if (errorLogs.length > 0) {
+      const errorHtml = `<pre>${errorLogs.join("\n")}</pre>`;
+      contentDiv.appendChild(createCollapsibleSection("错误日志", errorHtml, false));
+    }
+  }
+  
+  // -------------------------
+  // 进度条更新
+  // -------------------------
   function updateProgressBar(progress) {
     let progressBar = document.getElementById("progressBar");
     if (!progressBar) {
@@ -168,69 +381,62 @@
   }
   
   // -------------------------
-  // 创建可拖拽并支持缩放的图表窗口
+  // 创建可拖拽并支持缩放的窗口（数据图和结果窗口均采用）
   // -------------------------
-  // 在窗口左上角添加一个小圆形按钮作为拖拽手柄，同时创建一个内部内容区域
   function createChartContainer(id, top, left, width = "500px", height = "400px") {
     let container = document.getElementById(id);
     if (!container) {
       container = document.createElement("div");
       container.id = id;
       container.className = "chart-container";
-      container.style.position = "absolute";
       container.style.top = top;
       container.style.left = left;
       container.style.width = width;
       container.style.height = height;
       container.style.minWidth = "300px";
       container.style.minHeight = "250px";
-      container.style.resize = "both";  // 允许缩放
+      container.style.resize = "both";
       container.style.overflow = "hidden";
       container.style.boxShadow = "0 4px 8px rgba(0,0,0,0.3)";
       container.style.border = "1px solid #ccc";
       document.body.appendChild(container);
       
-      // 添加一个圆形拖拽按钮到左上角
       const dragButton = document.createElement("div");
       dragButton.className = "drag-button";
       dragButton.innerHTML = "≡";
       container.appendChild(dragButton);
       
-      // 创建专门用于显示图表内容的区域，避免覆盖拖拽按钮
       const contentDiv = document.createElement("div");
       contentDiv.className = "chart-content";
       container.appendChild(contentDiv);
       
-      // 绑定拖拽事件到拖拽按钮
       makeDraggable(container, dragButton);
     }
     return container;
   }
   
   // -------------------------
-  // 让窗口可拖拽（绑定到指定拖拽手柄上）
+  // 让窗口可拖拽
+  // 修改为使用 pageX/pageY，避免拖动时跳顶
   // -------------------------
   function makeDraggable(element, handle) {
     let offsetX, offsetY, isDragging = false;
-  
     handle.addEventListener("mousedown", (e) => {
-      e.preventDefault();  // 阻止默认文字选择
+      e.preventDefault();
       isDragging = true;
-      offsetX = e.clientX - element.getBoundingClientRect().left;
-      offsetY = e.clientY - element.getBoundingClientRect().top;
+      offsetX = e.pageX - element.offsetLeft;
+      offsetY = e.pageY - element.offsetTop;
       handle.style.cursor = "grabbing";
     });
-  
     document.addEventListener("mousemove", (e) => {
       if (!isDragging) return;
-      let newX = e.clientX - offsetX;
-      let newY = e.clientY - offsetY;
-      newX = Math.max(0, Math.min(window.innerWidth - element.offsetWidth, newX));
-      newY = Math.max(0, Math.min(window.innerHeight - element.offsetHeight, newY));
+      let newX = e.pageX - offsetX;
+      let newY = e.pageY - offsetY;
+      newX = Math.max(0, Math.min(document.documentElement.clientWidth - element.offsetWidth, newX));
+      newY = Math.max(0, Math.min(document.documentElement.clientHeight - element.offsetHeight, newY));
       element.style.left = newX + "px";
       element.style.top = newY + "px";
     });
-  
     document.addEventListener("mouseup", () => {
       isDragging = false;
       handle.style.cursor = "grab";
@@ -238,7 +444,7 @@
   }
   
   // -------------------------
-  // 动画函数：使用 gsap（若存在）或 CSS 过渡
+  // 动画函数：使用 gsap 或 CSS 过渡
   // -------------------------
   function fadeIn(element) {
     if (typeof gsap !== "undefined") {
@@ -285,7 +491,9 @@
     }
   }
   
-  // 统一关闭模态窗口：先动画 modal，再动画 overlay，最后移除节点
+  // -------------------------
+  // 统一关闭模态窗口
+  // -------------------------
   function closeModal(overlay, modal, callback) {
     animateModalOut(modal, () => {
       fadeOut(overlay, () => {
@@ -296,7 +504,7 @@
   }
   
   // -------------------------
-  // 统一创建模态窗口
+  // 统一创建模态窗口（用于交互提示）
   // -------------------------
   function createModal(maxWidth) {
     const overlay = document.createElement("div");
@@ -625,54 +833,20 @@
   }
   
   // -------------------------
-  // 简化美化的控制台进度显示函数
-  // -------------------------
-  function updatePageProgress(pageNum, totalPages) {
-    const progress = Math.floor((pageNum / totalPages) * 100);
-    const barLength = 20;
-    const filledLength = Math.round((progress / 100) * barLength);
-    const bar = "█".repeat(filledLength) + "░".repeat(barLength - filledLength);
-    console.clear();
-    console.log(
-      `%cFetching page ${pageNum}/${totalPages}: [${bar}] ${progress}%`,
-      "font-size:16px; color: #0066cc; font-weight: bold;"
-    );
-  }
-  
-  // -------------------------
-  // 时间轴控制台输出
-  // -------------------------
-  function displayTimeline(works) {
-    const groups = {};
-    works.forEach(work => {
-      groups[work.date] = groups[work.date] || [];
-      groups[work.date].push(work);
-    });
-    const sortedDates = Object.keys(groups).sort();
-    console.group("时间轴视图");
-    sortedDates.forEach(date => {
-      console.groupCollapsed(`日期：${date} (${groups[date].length} 项)`);
-      const timelineData = groups[date].map(work => ({
-        "作品名称": work.name,
-        "制作组": work.makerName,
-        "价格": work.price + " 日元"
-      }));
-      console.table(timelineData);
-      console.groupEnd();
-    });
-    console.groupEnd();
-  }
-  
-  // -------------------------
-  // 清理函数：移除动态创建的 DOM 元素并重置图表变量
+  // 清理函数：移除特定 DOM 元素并重置图表变量
   // -------------------------
   function cleanup() {
-    const ids = ["progressBar", "chartContainer1", "chartContainer2", "chartContainer3", "chartContainer4"];
+    const ids = ["progressBar", "chartContainer1", "chartContainer2", "chartContainer3", "chartContainer4", "resultWindow"];
     ids.forEach(id => {
       const elem = document.getElementById(id);
       if (elem) { elem.remove(); }
     });
     genreChartObj = makerChartObj = timelineChartObj = cumulativeChartObj = null;
+  }
+  
+  // 新增：清理所有残留的模态遮罩层，防止页面变灰
+  function cleanupOverlays() {
+    document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
   }
   
   // -------------------------
@@ -746,7 +920,6 @@
   // 主逻辑
   // -------------------------
   async function main() {
-    console.clear();
     cleanup();
     styledLog("✦ DLsite购买历史统计 ✦", "font-size: 28px; font-weight: bold; color: white; background: linear-gradient(to right, #ff6347, #ff1493, #8a2be2, #32cd32); padding: 10px; border-radius: 8px;");
     
@@ -823,7 +996,6 @@
     ]);
     if (showChart.toLowerCase() === "y") {
       await loadChartJs();
-      // 快速模式下（detailMode 为 false）不显示作品类型统计图
       if (detailMode) {
         drawGenreChart(filteredGenreCount);
       }
@@ -905,36 +1077,11 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
       await customAlert("文件保存操作已完成！");
     }
     
-    console.group("统计结果展示");
-    styledLog("☆ 统计结果 ☆", "font-size: 22px; font-weight: bold; color: #fff; background: linear-gradient(to right, #ff6347, #ff1493, #8a2be2, #32cd32); padding: 10px; border-radius: 8px;");
-    displayTable([ [`购买总数`, `${result.count} 部`], [`总消费金额`, `${result.totalPrice} 日元 (${(result.totalPrice * exchangeRate).toFixed(2)} 人民币)`] ], ["统计项目", "数量/金额"]);
-    styledLog("☆ 各类型作品数排名 ☆", "font-size: 20px; font-weight: bold; color: #fff; background: linear-gradient(to right, #ff7f50, #ff69b4); padding: 5px; border-radius: 8px;");
-    displayTable(filteredGenreCount.map(([type, count]) => [type, count.toString()]), ["类型", "作品数目"]);
-    styledLog("☆ 各制作组作品数排名 ☆", "font-size: 20px; font-weight: bold; color: #fff; background: linear-gradient(to right, #87cefa, #32cd32); padding: 5px; border-radius: 8px;");
-    displayTable(filteredMakerCount.map(([maker, count]) => [maker, count.toString()]), ["制作组", "作品数目"]);
-    if (result.eol.length > 0) {
-      styledLog("☆ 已下架作品 ☆", "font-size: 20px; font-weight: bold; color: #fff; background: linear-gradient(to right, #ff4500, #ff1493); padding: 5px; border-radius: 8px;");
-      displayTable(result.eol.map(eol => [eol.date, eol.makerName, eol.name, `${eol.price} 日元`]), ["购买日期", "制作组", "作品名称", "价格"]);
-    } else {
-      styledLog("ℹ️ 暂无已下架作品", "font-size: 18px; color: #666;", "info");
-    }
-    console.groupEnd();
+    // 将所有统计结果及信息整合到结果窗口中显示
+    displayResults(result, exchangeRate, filteredGenreCount, filteredMakerCount);
     
-    displayTimeline(result.works);
-    
-    // 美化后的作者信息展示
-    styledLog(
-      "★ 本脚本由 凛遥crush 修改制作 ★\n请在 GitHub 上为本项目点击 Star，谢谢！",
-      "font-size: 20px; font-weight: bold; color: #fff; background: linear-gradient(135deg, #ff7e5f, #feb47b); padding: 10px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);"
-    );
-    styledLog(
-      "★ 项目地址：https://github.com/linyaocrush/DLsite-Purchase-Analyzer ★",
-      "font-size: 20px; font-weight: bold; color: #fff; background: linear-gradient(135deg, #6a11cb, #2575fc); padding: 10px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);"
-    );
-    if (errorLogs.length > 0) {
-      styledLog("⚠️ 错误日志记录：", "color: red; font-weight: bold;", "error");
-      console.error(errorLogs);
-    }
+    // 清理残留的模态遮罩层，确保页面正常交互
+    cleanupOverlays();
   }
   
   // -------------------------
@@ -978,10 +1125,17 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
   }
   
   // -------------------------
+  // 清理所有残留的模态遮罩层（防止页面变灰）
+  // -------------------------
+  function cleanupOverlays() {
+    document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
+  }
+  
+  // -------------------------
   // 全局命令（方便调试）
   // -------------------------
   window.clearLogs = function() { console.clear(); };
-  window.reloadData = async function() { console.clear(); cleanup(); try { await main(); } catch(e) { console.error("reloadData encountered an error:", e); } };
+  window.reloadData = async function() { cleanup(); try { await main(); } catch(e) { console.error("reloadData encountered an error:", e); } };
   
   // -------------------------
   // 程序入口：直接运行
