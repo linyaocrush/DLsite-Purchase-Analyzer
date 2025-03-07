@@ -539,9 +539,12 @@
   
   const customAlert = (message) => {
     return new Promise(resolve => {
-      const { overlay, modal } = createModal("400px");
-      const msgDiv = document.createElement("div");
-      msgDiv.innerHTML = message;
+      const { overlay, modal } = createModal("600px");
+      const msgDiv = document.createElement("pre");
+      msgDiv.style.textAlign = "left";
+      msgDiv.style.maxHeight = "400px";
+      msgDiv.style.overflowY = "auto";
+      msgDiv.textContent = message;
       modal.appendChild(msgDiv);
       const btn = document.createElement("button");
       btn.textContent = "确定";
@@ -645,7 +648,7 @@
   // -------------------------
   // 图表绘制函数：作品类型统计（仅在 detailMode 为 true 时显示）
   // -------------------------
-  const drawGenreChart = (filteredGenreCount) => {
+  const drawGenreChart = (filteredGenreCount, works) => {
     const container = createChartContainer("chartContainer1", "100px", "100px");
     const contentDiv = container.querySelector(".chart-content");
     contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">
@@ -671,6 +674,19 @@
       borderColors = "rgba(75, 192, 192, 1)";
       options = { scales: { y: { beginAtZero: true } } };
     }
+    // 点击时显示该类型下的详细作品信息
+    options.onClick = (evt, elements) => {
+      if (elements.length > 0) {
+        const index = elements[0].index;
+        const genre = filteredGenreCount[index][0];
+        const worksWithGenre = works.filter(work => work.genre === genre || (work.mainGenre && work.mainGenre.includes(genre)));
+        let content = `类型: ${genre}\n作品数: ${worksWithGenre.length}\n\n`;
+        worksWithGenre.forEach(work => {
+          content += `作品名称: ${work.name}\n制作组: ${work.makerName}\n购买日期: ${work.date}\n价格: ${work.price} 日元\n\n`;
+        });
+        customAlert(content);
+      }
+    };
     
     genreChartObj = new Chart(ctx, {
       type: genreChartType,
@@ -692,7 +708,7 @@
       if (btn) {
         btn.addEventListener("click", () => {
           genreChartType = genreChartType === 'bar' ? 'pie' : 'bar';
-          drawGenreChart(filteredGenreCount);
+          drawGenreChart(filteredGenreCount, works);
         });
       }
     }, 0);
@@ -701,7 +717,7 @@
   // -------------------------
   // 图表绘制函数：制作组统计（添加切换按钮）
   // -------------------------
-  const drawMakerChart = (filteredMakerCount) => {
+  const drawMakerChart = (filteredMakerCount, works) => {
     const container = createChartContainer("chartContainer2", "100px", "650px");
     const contentDiv = container.querySelector(".chart-content");
     contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">
@@ -727,6 +743,19 @@
       borderColors = "rgba(153, 102, 255, 1)";
       options = { scales: { y: { beginAtZero: true } } };
     }
+    // 点击时显示该制作组下的详细作品信息
+    options.onClick = (evt, elements) => {
+      if (elements.length > 0) {
+        const index = elements[0].index;
+        const maker = filteredMakerCount[index][0];
+        const worksByMaker = works.filter(work => work.makerName === maker);
+        let content = `制作组: ${maker}\n作品数: ${worksByMaker.length}\n\n`;
+        worksByMaker.forEach(work => {
+          content += `作品名称: ${work.name}\n购买日期: ${work.date}\n价格: ${work.price} 日元\n\n`;
+        });
+        customAlert(content);
+      }
+    };
     
     makerChartObj = new Chart(ctx, {
       type: makerChartType,
@@ -748,7 +777,7 @@
       if (btn) {
         btn.addEventListener("click", () => {
           makerChartType = makerChartType === 'bar' ? 'pie' : 'bar';
-          drawMakerChart(filteredMakerCount);
+          drawMakerChart(filteredMakerCount, works);
         });
       }
     }, 0);
@@ -770,6 +799,25 @@
     contentDiv.appendChild(canvas);
     const ctx = canvas.getContext("2d");
     if (timelineChartObj) { timelineChartObj.destroy(); }
+    const options = {
+      scales: {
+        x: { title: { display: true, text: '购买日期' } },
+        y: { beginAtZero: true, title: { display: true, text: '购买数量' } }
+      },
+      // 点击时显示该日期的详细作品信息
+      onClick: (evt, elements) => {
+        if (elements.length > 0) {
+          const index = elements[0].index;
+          const date = sortedDates[index];
+          const worksOnDate = works.filter(work => work.date === date);
+          let content = `日期: ${date}\n购买数量: ${worksOnDate.length}\n\n`;
+          worksOnDate.forEach(work => {
+            content += `作品名称: ${work.name}\n制作组: ${work.makerName}\n价格: ${work.price} 日元\n\n`;
+          });
+          customAlert(content);
+        }
+      }
+    };
     timelineChartObj = new Chart(ctx, {
       type: 'line',
       data: {
@@ -783,12 +831,7 @@
           tension: 0.1
         }]
       },
-      options: {
-        scales: {
-          x: { title: { display: true, text: '购买日期' } },
-          y: { beginAtZero: true, title: { display: true, text: '购买数量' } }
-        }
-      }
+      options: options
     });
   };
   
@@ -810,6 +853,25 @@
     contentDiv.appendChild(canvas);
     const ctx = canvas.getContext("2d");
     if (cumulativeChartObj) { cumulativeChartObj.destroy(); }
+    const options = {
+      scales: {
+        x: { title: { display: true, text: '购买日期' } },
+        y: { beginAtZero: true, title: { display: true, text: '累计金额' } }
+      },
+      // 点击时显示该日期的详细累计信息（列出当日所有作品）
+      onClick: (evt, elements) => {
+        if (elements.length > 0) {
+          const index = elements[0].index;
+          const date = sortedDates[index];
+          const worksOnDate = works.filter(work => work.date === date);
+          let content = `日期: ${date}\n当日作品: ${worksOnDate.length}\n\n`;
+          worksOnDate.forEach(work => {
+            content += `作品名称: ${work.name}\n制作组: ${work.makerName}\n价格: ${work.price} 日元\n\n`;
+          });
+          customAlert(content);
+        }
+      }
+    };
     cumulativeChartObj = new Chart(ctx, {
       type: 'line',
       data: {
@@ -823,12 +885,7 @@
           tension: 0.1
         }]
       },
-      options: {
-        scales: {
-          x: { title: { display: true, text: '购买日期' } },
-          y: { beginAtZero: true, title: { display: true, text: '累计金额' } }
-        }
-      }
+      options: options
     });
   };
   
@@ -999,9 +1056,9 @@
     if (showChart.toLowerCase() === "y") {
       await loadChartJs();
       if (detailMode) {
-        drawGenreChart(filteredGenreCount);
+        drawGenreChart(filteredGenreCount, result.works);
       }
-      drawMakerChart(filteredMakerCount);
+      drawMakerChart(filteredMakerCount, result.works);
       drawTimelineChart(result.works);
       drawCumulativeChart(result.works);
     }
