@@ -1,7 +1,3 @@
-```markdown
-[ファイル名]: README.md
-[ファイル内容開始]
-<a href="https://github.com/linyaocrush/DLsite-Purchase-Analyzer/blob/main/README-JP.md" target="_blank">日本語</a>
 
 # DLsite 購入分析ツール v2.0
 
