@@ -1,3 +1,5 @@
+<a href="https://github.com/linyaocrush/DLsite-Purchase-Analyzer/blob/main/README-JP.md" target="_blank">日本語</a>
+
 # DLsite 购买分析工具 v2.0
 
 📈 基于用户行为的DLsite购买记录深度分析工具，支持可视化图表、交互式弹窗和智能数据导出
