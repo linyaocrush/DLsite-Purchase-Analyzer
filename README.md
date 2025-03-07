@@ -1,4 +1,3 @@
-
 # DLsite 购买分析工具 v2.0
 
 📈 基于用户行为的DLsite购买记录深度分析工具，支持可视化图表、交互式弹窗和智能数据导出
@@ -43,7 +42,6 @@
 - 多格式导出支持（MD预览/CSV/控制台表格）
 - 自适应移动端显示
 - 错误日志追溯功能
-- 作者信息水印系统
 
 ---
 
@@ -59,7 +57,6 @@ Chrome 89+ / Firefox 86+ / Edge 91+
 1. 登录 [DLsite购买记录页](https://www.dlsite.com/maniax/mypage/userbuy)
 2. 打开开发者工具（F12）
 3. 在Console面板粘贴完整代码
-
 
 ## 🔄 交互流程详解
 
@@ -464,6 +461,9 @@ function debouncedRedraw() {
 
 ## 📌 版本历史
 
+### v2.1 (2025/03/07)
+- 新增结果窗口，不在需要看控制台
+
 ### v2.0 (2025/03/03)
 - 新增四维图表系统
 - 重构交互系统（弃用alert/prompt）
@@ -487,3 +487,4 @@ MIT License | 严禁用于商业用途
 
 > 🌐 项目地址：https://github.com/linyaocrush/DLsite-Purchase-Analyzer  
 > 📧 问题反馈：附带控制台错误截图创建Issue
+```
