@@ -606,6 +606,117 @@
   };
   
   // -------------------------
+  // 新增：下拉菜单选择时间段（仅显示有购买记录的日期）的功能
+  // -------------------------
+  const customSelectPeriods = (availableDates) => {
+    return new Promise(resolve => {
+      const { overlay, modal } = createModal("500px");
+      const title = document.createElement("h2");
+      title.textContent = "选择时间段进行数据对比分析";
+      modal.appendChild(title);
+      
+      // 时间段1
+      const period1Container = document.createElement("div");
+      period1Container.style.margin = "10px 0";
+      const period1Label = document.createElement("div");
+      period1Label.textContent = "时间段 1:";
+      period1Container.appendChild(period1Label);
+      
+      const period1StartLabel = document.createElement("label");
+      period1StartLabel.textContent = "开始日期: ";
+      const period1StartSelect = document.createElement("select");
+      availableDates.forEach(date => {
+        const option = document.createElement("option");
+        option.value = date;
+        option.textContent = date;
+        period1StartSelect.appendChild(option);
+      });
+      period1Container.appendChild(period1StartLabel);
+      period1Container.appendChild(period1StartSelect);
+      
+      const period1EndLabel = document.createElement("label");
+      period1EndLabel.textContent = " 结束日期: ";
+      const period1EndSelect = document.createElement("select");
+      availableDates.forEach(date => {
+        const option = document.createElement("option");
+        option.value = date;
+        option.textContent = date;
+        period1EndSelect.appendChild(option);
+      });
+      period1Container.appendChild(period1EndLabel);
+      period1Container.appendChild(period1EndSelect);
+      modal.appendChild(period1Container);
+      
+      // 时间段2
+      const period2Container = document.createElement("div");
+      period2Container.style.margin = "10px 0";
+      const period2Label = document.createElement("div");
+      period2Label.textContent = "时间段 2:";
+      period2Container.appendChild(period2Label);
+      
+      const period2StartLabel = document.createElement("label");
+      period2StartLabel.textContent = "开始日期: ";
+      const period2StartSelect = document.createElement("select");
+      availableDates.forEach(date => {
+        const option = document.createElement("option");
+        option.value = date;
+        option.textContent = date;
+        period2StartSelect.appendChild(option);
+      });
+      period2Container.appendChild(period2StartLabel);
+      period2Container.appendChild(period2StartSelect);
+      
+      const period2EndLabel = document.createElement("label");
+      period2EndLabel.textContent = " 结束日期: ";
+      const period2EndSelect = document.createElement("select");
+      availableDates.forEach(date => {
+        const option = document.createElement("option");
+        option.value = date;
+        option.textContent = date;
+        period2EndSelect.appendChild(option);
+      });
+      period2Container.appendChild(period2EndLabel);
+      period2Container.appendChild(period2EndSelect);
+      modal.appendChild(period2Container);
+      
+      // 按钮
+      const btnContainer = document.createElement("div");
+      btnContainer.style.marginTop = "15px";
+      const okBtn = document.createElement("button");
+      okBtn.textContent = "确定";
+      okBtn.className = "btn";
+      const cancelBtn = document.createElement("button");
+      cancelBtn.textContent = "取消";
+      cancelBtn.className = "btn";
+      btnContainer.appendChild(okBtn);
+      btnContainer.appendChild(cancelBtn);
+      modal.appendChild(btnContainer);
+      
+      okBtn.addEventListener("click", () => {
+        const p1Start = period1StartSelect.value;
+        const p1End = period1EndSelect.value;
+        const p2Start = period2StartSelect.value;
+        const p2End = period2EndSelect.value;
+        if(new Date(p1Start) > new Date(p1End)){
+          customAlert("时间段1的开始日期不能晚于结束日期。");
+          return;
+        }
+        if(new Date(p2Start) > new Date(p2End)){
+          customAlert("时间段2的开始日期不能晚于结束日期。");
+          return;
+        }
+        closeModal(overlay, modal, () => {
+          resolve({
+            period1: { start: new Date(p1Start), end: new Date(p1End) },
+            period2: { start: new Date(p2Start), end: new Date(p2End) }
+          });
+        });
+      });
+      cancelBtn.addEventListener("click", () => { closeModal(overlay, modal, () => { resolve(null); }); });
+    });
+  };
+  
+  // -------------------------
   // 文件导出相关函数
   // -------------------------
   const exportCSV = (data, filename) => {
@@ -890,10 +1001,109 @@
   };
   
   // -------------------------
+  // 新增：数据对比功能——比较两个时间段的购买数据，并生成统计和对比图表
+  // -------------------------
+  const comparePeriods = (result, period1, period2, exchangeRate) => {
+    const works1 = result.works.filter(work => {
+      const d = new Date(work.date);
+      return d >= period1.start && d <= period1.end;
+    });
+    const works2 = result.works.filter(work => {
+      const d = new Date(work.date);
+      return d >= period2.start && d <= period2.end;
+    });
+    const count1 = works1.length;
+    const totalPrice1 = works1.reduce((sum, work) => sum + work.price, 0);
+    const count2 = works2.length;
+    const totalPrice2 = works2.reduce((sum, work) => sum + work.price, 0);
+    const summary = `
+数据对比分析结果：
+时间段 1 (${period1.start.toLocaleDateString()} ~ ${period1.end.toLocaleDateString()}):
+   购买数量: ${count1} 部
+   总消费金额: ${totalPrice1} 日元 (${(totalPrice1 * exchangeRate).toFixed(2)} 人民币)
+
+时间段 2 (${period2.start.toLocaleDateString()} ~ ${period2.end.toLocaleDateString()}):
+   购买数量: ${count2} 部
+   总消费金额: ${totalPrice2} 日元 (${(totalPrice2 * exchangeRate).toFixed(2)} 人民币)
+
+数量差异: ${count2 - count1} 部
+消费金额差异: ${totalPrice2 - totalPrice1} 日元
+    `;
+    customAlert(summary);
+    drawComparisonChart(count1, count2, totalPrice1, totalPrice2, 
+       `${period1.start.toLocaleDateString()} ~ ${period1.end.toLocaleDateString()}`,
+       `${period2.start.toLocaleDateString()} ~ ${period2.end.toLocaleDateString()}`);
+  };
+  
+  // 修改后的对比图表函数，使用双坐标轴分别显示两个指标
+  const drawComparisonChart = (count1, count2, totalPrice1, totalPrice2, label1, label2) => {
+    const container = createChartContainer("comparisonChart", "850px", "100px", "600px", "400px");
+    const contentDiv = container.querySelector(".chart-content");
+    contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">数据对比分析</h3>`;
+    const canvas = document.createElement("canvas");
+    canvas.style.width = "100%";
+    canvas.style.height = "calc(100% - 30px)";
+    contentDiv.appendChild(canvas);
+    const ctx = canvas.getContext("2d");
+    new Chart(ctx, {
+         type: 'bar',
+         data: {
+             labels: ["购买数量", "消费金额 (日元)"],
+             datasets: [{
+                 label: label1 + " 购买数量",
+                 data: [count1, null],
+                 backgroundColor: "rgba(75, 192, 192, 0.6)",
+                 borderColor: "rgba(75, 192, 192, 1)",
+                 borderWidth: 1,
+                 yAxisID: 'y'
+             },{
+                 label: label2 + " 购买数量",
+                 data: [count2, null],
+                 backgroundColor: "rgba(75, 192, 192, 0.3)",
+                 borderColor: "rgba(75, 192, 192, 1)",
+                 borderWidth: 1,
+                 yAxisID: 'y'
+             },{
+                 label: label1 + " 消费金额",
+                 data: [null, totalPrice1],
+                 backgroundColor: "rgba(153, 102, 255, 0.6)",
+                 borderColor: "rgba(153, 102, 255, 1)",
+                 borderWidth: 1,
+                 yAxisID: 'y1'
+             },{
+                 label: label2 + " 消费金额",
+                 data: [null, totalPrice2],
+                 backgroundColor: "rgba(153, 102, 255, 0.3)",
+                 borderColor: "rgba(153, 102, 255, 1)",
+                 borderWidth: 1,
+                 yAxisID: 'y1'
+             }]
+         },
+         options: {
+            scales: {
+              y: {
+                type: 'linear',
+                position: 'left',
+                beginAtZero: true,
+                title: { display: true, text: '购买数量' }
+              },
+              y1: {
+                type: 'linear',
+                position: 'right',
+                beginAtZero: true,
+                title: { display: true, text: '消费金额 (日元)' },
+                grid: { drawOnChartArea: false }
+              }
+            }
+         }
+    });
+  };
+  
+  // -------------------------
   // 清理函数：移除特定 DOM 元素并重置图表变量
   // -------------------------
   const cleanup = () => {
-    const ids = ["progressBar", "chartContainer1", "chartContainer2", "chartContainer3", "chartContainer4", "resultWindow"];
+    const ids = ["progressBar", "chartContainer1", "chartContainer2", "chartContainer3", "chartContainer4", "resultWindow", "comparisonChart"];
     ids.forEach(id => {
       const elem = document.getElementById(id);
       if (elem) { elem.remove(); }
@@ -1063,17 +1273,27 @@
       drawCumulativeChart(result.works);
     }
     
-    const saveFile = await customChoice("统计完成！是否需要保存为文件？", [
-      { label: "保存", value: "y" },
-      { label: "不保存", value: "n" }
-    ]);
-    if (saveFile.toLowerCase() === "y") {
-      const fileFormat = await customChoice("请选择保存格式：", [
-        { label: "全部下载", value: "0" },
-        { label: "仅保存 MD", value: "1" },
-        { label: "仅保存 CSV", value: "2" }
-      ]);
-      const markdownContent = `
+    // 直接显示统计结果窗口
+    displayResults(result, exchangeRate, filteredGenreCount, filteredMakerCount);
+    
+    // 在页面左上角添加“下载文件”按钮
+    const addDownloadButton = () => {
+      const downloadBtn = document.createElement("button");
+      downloadBtn.textContent = "下载文件";
+      downloadBtn.className = "btn";
+      downloadBtn.style.position = "fixed";
+      downloadBtn.style.top = "10px";
+      downloadBtn.style.left = "10px";
+      downloadBtn.style.zIndex = "100001";
+      downloadBtn.addEventListener("click", async () => {
+        const fileFormat = await customChoice("请选择保存格式：", [
+          { label: "全部下载", value: "0" },
+          { label: "仅保存 MD", value: "1" },
+          { label: "仅保存 CSV", value: "2" },
+          { label: "关闭", value: "cancel" }
+        ]);
+        if(fileFormat === "cancel") return;
+        const markdownContent = `
 # DLsite购买历史查询报告
 
 > 数据统计报告，生成时间：${new Date().toLocaleString()}
@@ -1110,34 +1330,58 @@ ${result.eol.length > 0 ? (
 | -------- | ------ | -------- | ---- |
 ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.price} 日元 |`).join("\n")}`
 ) : "暂无已下架作品"}
-`;
-      if (fileFormat === "1") {
-        showMarkdownPreviewAndDownload(markdownContent, "DLsite购买历史查询.md");
-      } else if (fileFormat === "0") {
-        showMarkdownPreviewAndDownload(markdownContent, "DLsite购买历史查询.md");
-        exportCSV([
-          ["统计项目", "数量/金额"],
-          ["购买总数", result.count],
-          ["总消费金额", `${result.totalPrice} 日元 (${(result.totalPrice * exchangeRate).toFixed(2)} 人民币)`],
-          ...filteredGenreCount,
-          ...filteredMakerCount,
-          ...result.eol.map(eol => [eol.date, eol.makerName, eol.name, `${eol.price} 日元`])
-        ], "DLsite购买历史查询.csv");
-      } else if (fileFormat === "2") {
-        exportCSV([
-          ["统计项目", "数量/金额"],
-          ["购买总数", result.count],
-          ["总消费金额", `${result.totalPrice} 日元 (${(result.totalPrice * exchangeRate).toFixed(2)} 人民币)`],
-          ...filteredGenreCount,
-          ...filteredMakerCount,
-          ...result.eol.map(eol => [eol.date, eol.makerName, eol.name, `${eol.price} 日元`])
-        ], "DLsite购买历史查询.csv");
-      }
-      await customAlert("文件保存操作已完成！");
-    }
+        `;
+        if (fileFormat === "1") {
+          showMarkdownPreviewAndDownload(markdownContent, "DLsite购买历史查询.md");
+        } else if (fileFormat === "0") {
+          showMarkdownPreviewAndDownload(markdownContent, "DLsite购买历史查询.md");
+          exportCSV([
+            ["统计项目", "数量/金额"],
+            ["购买总数", result.count],
+            ["总消费金额", `${result.totalPrice} 日元 (${(result.totalPrice * exchangeRate).toFixed(2)} 人民币)`],
+            ...filteredGenreCount,
+            ...filteredMakerCount,
+            ...result.eol.map(eol => [eol.date, eol.makerName, eol.name, `${eol.price} 日元`])
+          ], "DLsite购买历史查询.csv");
+        } else if (fileFormat === "2") {
+          exportCSV([
+            ["统计项目", "数量/金额"],
+            ["购买总数", result.count],
+            ["总消费金额", `${result.totalPrice} 日元 (${(result.totalPrice * exchangeRate).toFixed(2)} 人民币)`],
+            ...filteredGenreCount,
+            ...filteredMakerCount,
+            ...result.eol.map(eol => [eol.date, eol.makerName, eol.name, `${eol.price} 日元`])
+          ], "DLsite购买历史查询.csv");
+        }
+      });
+      document.body.appendChild(downloadBtn);
+    };
+    addDownloadButton();
     
-    // 将所有统计结果及信息整合到结果窗口中显示
-    displayResults(result, exchangeRate, filteredGenreCount, filteredMakerCount);
+    // 在页面左上角添加“数据对比分析”按钮
+    const addComparisonButton = () => {
+      const compBtn = document.createElement("button");
+      compBtn.textContent = "数据对比分析";
+      compBtn.className = "btn";
+      compBtn.style.position = "fixed";
+      compBtn.style.top = "10px";
+      compBtn.style.left = "120px";
+      compBtn.style.zIndex = "100001";
+      compBtn.addEventListener("click", async () => {
+        // 提取所有有购买记录的日期（去重并排序）
+        const uniqueDates = [...new Set(result.works.map(work => work.date))].sort((a,b) => new Date(a) - new Date(b));
+        if(uniqueDates.length === 0) {
+          await customAlert("没有可供选择的购买日期记录。");
+          return;
+        }
+        const periods = await customSelectPeriods(uniqueDates);
+        if(periods) {
+          comparePeriods(result, periods.period1, periods.period2, exchangeRate);
+        }
+      });
+      document.body.appendChild(compBtn);
+    };
+    addComparisonButton();
     
     // 清理残留的模态遮罩层，确保页面正常交互
     cleanupOverlays();
