@@ -4,7 +4,7 @@
   // -------------------------
   // 样式注入（抽离内联样式）
   // -------------------------
-  function injectStyles() {
+  const injectStyles = () => {
     const style = document.createElement('style');
     style.textContent = `
       .modal-overlay {
@@ -151,32 +151,32 @@
       }
     `;
     document.head.appendChild(style);
-  }
+  };
   
   // -------------------------
-  // 全局变量和错误日志
+  // 全局变量和错误日志（采用 let/const 替换 var）
   // -------------------------
-  var genreChartObj = null;
-  var makerChartObj = null;
-  var timelineChartObj = null;
-  var cumulativeChartObj = null;
-  var errorLogs = [];
-  var genreChartType = 'bar';
-  var makerChartType = 'bar';
+  let genreChartObj = null;
+  let makerChartObj = null;
+  let timelineChartObj = null;
+  let cumulativeChartObj = null;
+  let errorLogs = [];
+  let genreChartType = 'bar';
+  let makerChartType = 'bar';
   
   // -------------------------
-  // 通用日志输出
+  // 通用日志输出（使用箭头函数）
   // -------------------------
-  function styledLog(message, style = "", type = "log") {
+  const styledLog = (message, style = "", type = "log") => {
     const logFns = { log: console.log, warn: console.warn, error: console.error, info: console.info };
     logFns[type](`%c${message}`, style);
-  }
+  };
   window.styledLog = styledLog;
   
   // -------------------------
   // 创建折叠面板（在标题前添加一个箭头指示）
   // -------------------------
-  function createCollapsibleSection(titleText, contentHtml, collapsed = false) {
+  const createCollapsibleSection = (titleText, contentHtml, collapsed = false) => {
     const section = document.createElement("div");
     section.className = "collapsible-section";
     
@@ -208,12 +208,12 @@
     section.appendChild(header);
     section.appendChild(content);
     return section;
-  }
+  };
   
   // -------------------------
   // 创建结果窗口（与数据图窗口类似，可拖拽、缩放，默认尺寸为数据图的2倍）
   // -------------------------
-  function createResultWindow() {
+  const createResultWindow = () => {
     let container = document.getElementById("resultWindow");
     if (!container) {
       container = document.createElement("div");
@@ -245,12 +245,12 @@
       return contentDiv;
     }
     return container.querySelector(".chart-content");
-  }
+  };
   
   // -------------------------
   // 将所有统计及相关信息显示到结果窗口中
   // -------------------------
-  function displayResults(result, exchangeRate, filteredGenreCount, filteredMakerCount) {
+  const displayResults = (result, exchangeRate, filteredGenreCount, filteredMakerCount) => {
     const contentDiv = createResultWindow();
     contentDiv.innerHTML = "";
     
@@ -360,12 +360,12 @@
       const errorHtml = `<pre>${errorLogs.join("\n")}</pre>`;
       contentDiv.appendChild(createCollapsibleSection("错误日志", errorHtml, false));
     }
-  }
+  };
   
   // -------------------------
   // 进度条更新
   // -------------------------
-  function updateProgressBar(progress) {
+  const updateProgressBar = (progress) => {
     let progressBar = document.getElementById("progressBar");
     if (!progressBar) {
       progressBar = document.createElement("div");
@@ -378,12 +378,12 @@
       document.body.appendChild(progressBar);
     }
     document.getElementById("innerProgressBar").style.width = progress + "%";
-  }
+  };
   
   // -------------------------
   // 创建可拖拽并支持缩放的窗口（数据图和结果窗口均采用）
   // -------------------------
-  function createChartContainer(id, top, left, width = "500px", height = "400px") {
+  const createChartContainer = (id, top, left, width = "500px", height = "400px") => {
     let container = document.getElementById(id);
     if (!container) {
       container = document.createElement("div");
@@ -413,14 +413,14 @@
       makeDraggable(container, dragButton);
     }
     return container;
-  }
+  };
   
   // -------------------------
-  // 让窗口可拖拽
-  // 修改为使用 pageX/pageY，避免拖动时跳顶
+  // 让窗口可拖拽（使用箭头函数，采用 pageX/pageY 避免拖动时跳顶）
   // -------------------------
-  function makeDraggable(element, handle) {
-    let offsetX, offsetY, isDragging = false;
+  const makeDraggable = (element, handle) => {
+    let offsetX, offsetY;
+    let isDragging = false;
     handle.addEventListener("mousedown", (e) => {
       e.preventDefault();
       isDragging = true;
@@ -441,12 +441,12 @@
       isDragging = false;
       handle.style.cursor = "grab";
     });
-  }
+  };
   
   // -------------------------
   // 动画函数：使用 gsap 或 CSS 过渡
   // -------------------------
-  function fadeIn(element) {
+  const fadeIn = (element) => {
     if (typeof gsap !== "undefined") {
       gsap.fromTo(element, { opacity: 0 }, { opacity: 1, duration: 0.2, ease: "power2.out" });
     } else {
@@ -454,16 +454,16 @@
       element.style.transition = "opacity 0.2s ease-out";
       setTimeout(() => { element.style.opacity = 1; }, 10);
     }
-  }
-  function fadeOut(element, callback) {
+  };
+  const fadeOut = (element, callback) => {
     if (typeof gsap !== "undefined") {
       gsap.to(element, { opacity: 0, duration: 0.2, ease: "power2.in", onComplete: callback });
     } else {
       element.style.opacity = 0;
       setTimeout(callback, 200);
     }
-  }
-  function animateModalIn(element) {
+  };
+  const animateModalIn = (element) => {
     if (typeof gsap !== "undefined") {
       gsap.fromTo(element, { scale: 0.8, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.2, ease: "back.out(1.7)" });
     } else {
@@ -475,8 +475,8 @@
         element.style.opacity = "1";
       }, 10);
     }
-  }
-  function animateModalOut(element, callback) {
+  };
+  const animateModalOut = (element, callback) => {
     if (typeof gsap !== "undefined") {
       gsap.to(element, { scale: 0.8, opacity: 0, duration: 0.2, ease: "back.in(1.7)", onComplete: callback });
     } else {
@@ -489,24 +489,24 @@
         setTimeout(callback, 200);
       }, 10);
     }
-  }
+  };
   
   // -------------------------
   // 统一关闭模态窗口
   // -------------------------
-  function closeModal(overlay, modal, callback) {
+  const closeModal = (overlay, modal, callback) => {
     animateModalOut(modal, () => {
       fadeOut(overlay, () => {
         document.body.removeChild(overlay);
         if(callback) callback();
       });
     });
-  }
+  };
   
   // -------------------------
   // 统一创建模态窗口（用于交互提示）
   // -------------------------
-  function createModal(maxWidth) {
+  const createModal = (maxWidth) => {
     const overlay = document.createElement("div");
     overlay.className = "modal-overlay";
     fadeIn(overlay);
@@ -517,9 +517,9 @@
     document.body.appendChild(overlay);
     animateModalIn(modal);
     return { overlay, modal };
-  }
+  };
   
-  function customChoice(message, options) {
+  const customChoice = (message, options) => {
     return new Promise(resolve => {
       const { overlay, modal } = createModal("500px");
       const msgDiv = document.createElement("div");
@@ -535,9 +535,9 @@
       });
       modal.appendChild(btnContainer);
     });
-  }
+  };
   
-  function customAlert(message) {
+  const customAlert = (message) => {
     return new Promise(resolve => {
       const { overlay, modal } = createModal("400px");
       const msgDiv = document.createElement("div");
@@ -549,9 +549,9 @@
       btn.addEventListener("click", () => { closeModal(overlay, modal, resolve); });
       modal.appendChild(btn);
     });
-  }
+  };
   
-  function customPrompt(message, defaultValue = "") {
+  const customPrompt = (message, defaultValue = "") => {
     return new Promise(resolve => {
       const { overlay, modal } = createModal("400px");
       const msgDiv = document.createElement("div");
@@ -578,9 +578,9 @@
       btnContainer.appendChild(cancelBtn);
       modal.appendChild(btnContainer);
     });
-  }
+  };
   
-  function customConfirm(message) {
+  const customConfirm = (message) => {
     return new Promise(resolve => {
       const { overlay, modal } = createModal("400px");
       const msgDiv = document.createElement("div");
@@ -600,23 +600,23 @@
       btnContainer.appendChild(cancelBtn);
       modal.appendChild(btnContainer);
     });
-  }
+  };
   
   // -------------------------
   // 文件导出相关函数
   // -------------------------
-  function exportCSV(data, filename) {
+  const exportCSV = (data, filename) => {
     const csvContent = data.map(row => row.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url; a.download = filename; a.click();
-  }
+  };
   
   // -------------------------
   // Chart.js 加载（异步加载）
   // -------------------------
-  async function loadChartJs() {
+  const loadChartJs = async () => {
     if (typeof Chart === "undefined") {
       return new Promise((resolve, reject) => {
         const script = document.createElement("script");
@@ -626,12 +626,12 @@
         document.head.appendChild(script);
       });
     }
-  }
+  };
   
   // -------------------------
   // fetchUrlAsync：统一请求封装及错误处理
   // -------------------------
-  async function fetchUrlAsync(url) {
+  const fetchUrlAsync = async (url) => {
     try {
       const response = await fetch(url);
       if (!response.ok) throw new Error(response.statusText);
@@ -640,12 +640,12 @@
       errorLogs.push("Error fetching " + url + ": " + e);
       return "";
     }
-  }
+  };
   
   // -------------------------
   // 图表绘制函数：作品类型统计（仅在 detailMode 为 true 时显示）
   // -------------------------
-  function drawGenreChart(filteredGenreCount) {
+  const drawGenreChart = (filteredGenreCount) => {
     const container = createChartContainer("chartContainer1", "100px", "100px");
     const contentDiv = container.querySelector(".chart-content");
     contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">
@@ -696,12 +696,12 @@
         });
       }
     }, 0);
-  }
+  };
   
   // -------------------------
   // 图表绘制函数：制作组统计（添加切换按钮）
   // -------------------------
-  function drawMakerChart(filteredMakerCount) {
+  const drawMakerChart = (filteredMakerCount) => {
     const container = createChartContainer("chartContainer2", "100px", "650px");
     const contentDiv = container.querySelector(".chart-content");
     contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">
@@ -752,9 +752,9 @@
         });
       }
     }, 0);
-  }
+  };
   
-  function drawTimelineChart(works) {
+  const drawTimelineChart = (works) => {
     const groups = {};
     works.forEach(work => {
       groups[work.date] = (groups[work.date] || 0) + 1;
@@ -790,9 +790,9 @@
         }
       }
     });
-  }
+  };
   
-  function drawCumulativeChart(works) {
+  const drawCumulativeChart = (works) => {
     const groups = {};
     works.forEach(work => {
       groups[work.date] = (groups[work.date] || 0) + work.price;
@@ -830,31 +830,31 @@
         }
       }
     });
-  }
+  };
   
   // -------------------------
   // 清理函数：移除特定 DOM 元素并重置图表变量
   // -------------------------
-  function cleanup() {
+  const cleanup = () => {
     const ids = ["progressBar", "chartContainer1", "chartContainer2", "chartContainer3", "chartContainer4", "resultWindow"];
     ids.forEach(id => {
       const elem = document.getElementById(id);
       if (elem) { elem.remove(); }
     });
     genreChartObj = makerChartObj = timelineChartObj = cumulativeChartObj = null;
-  }
+  };
   
-  // 新增：清理所有残留的模态遮罩层，防止页面变灰
-  function cleanupOverlays() {
+  // 清理所有残留的模态遮罩层，防止页面变灰
+  const cleanupOverlays = () => {
     document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
-  }
+  };
   
   // -------------------------
   // 数据抓取及处理
   // -------------------------
-  async function processPage(doc, result, detailMode) {
+  const processPage = async (doc, result, detailMode) => {
     const trElms = doc.querySelectorAll(".work_list_main tr:not(.item_name)");
-    let detailPromises = [];
+    const detailPromises = [];
     trElms.forEach(elm => {
       const work = {};
       work.url = elm.querySelector(".work_name a") ? elm.querySelector(".work_name a").href : "";
@@ -865,7 +865,7 @@
       work.price = parseInt(priceText.replace(/\D/g, ''));
       work.makerName = elm.querySelector(".maker_name").innerText.trim();
       if (detailMode && work.url !== "") {
-        detailPromises.push((async function(w) {
+        detailPromises.push((async (w) => {
           try {
             styledLog(`🔍 获取作品详情: ${w.url}`, "color: #9933ff; font-weight: bold;");
             const workText = await fetchUrlAsync(w.url);
@@ -888,10 +888,10 @@
       if (!work.url) result.eol.push(work);
     });
     if (detailPromises.length > 0) await Promise.all(detailPromises);
-  }
+  };
   
-  async function fetchAllPages(dlurl, detailMode, updateProgressCallback) {
-    let result = { count: 0, totalPrice: 0, works: [], genreCount: new Map(), makerCount: new Map(), eol: [] };
+  const fetchAllPages = async (dlurl, detailMode, updateProgressCallback) => {
+    const result = { count: 0, totalPrice: 0, works: [], genreCount: new Map(), makerCount: new Map(), eol: [] };
     const firstPageText = await fetchUrlAsync(dlurl + "1");
     const firstDoc = new DOMParser().parseFromString(firstPageText, "text/html");
     let lastPage = 1;
@@ -899,9 +899,9 @@
     if (lastPageElm) { lastPage = parseInt(lastPageElm.dataset.value); }
     await processPage(firstDoc, result, detailMode);
     updateProgressCallback(1, lastPage);
-    let promises = [];
+    const promises = [];
     for (let i = 2; i <= lastPage; i++) {
-      promises.push((async function(pageNum) {
+      promises.push((async (pageNum) => {
         try {
           const pageText = await fetchUrlAsync(dlurl + pageNum);
           const doc = new DOMParser().parseFromString(pageText, "text/html");
@@ -914,12 +914,12 @@
     }
     await Promise.all(promises);
     return result;
-  }
+  };
   
   // -------------------------
   // 主逻辑
   // -------------------------
-  async function main() {
+  const main = async () => {
     cleanup();
     styledLog("✦ DLsite购买历史统计 ✦", "font-size: 28px; font-weight: bold; color: white; background: linear-gradient(to right, #ff6347, #ff1493, #8a2be2, #32cd32); padding: 10px; border-radius: 8px;");
     
@@ -970,7 +970,9 @@
     }
     
     console.group("📄 页面抓取进度");
-    const result = await fetchAllPages(dlurl, detailMode, updateProgressBar);
+    const result = await fetchAllPages(dlurl, detailMode, (page, total) => {
+      updateProgressBar((page / total) * 100);
+    });
     console.groupEnd();
     
     const excludeResponse = await customPrompt("请输入要排除的最少作品数目（例如输入 3 表示排除数目小于 3 的作品类型）：", "0");
@@ -1082,12 +1084,12 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
     
     // 清理残留的模态遮罩层，确保页面正常交互
     cleanupOverlays();
-  }
+  };
   
   // -------------------------
   // Markdown预览及下载窗口
   // -------------------------
-  function showMarkdownPreviewAndDownload(markdownContent, fileName) {
+  const showMarkdownPreviewAndDownload = (markdownContent, fileName) => {
     const overlay = document.createElement("div");
     overlay.className = "modal-overlay";
     overlay.style.background = "rgba(0,0,0,0.7)";
@@ -1122,26 +1124,19 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
     animateModalIn(modal);
-  }
-  
-  // -------------------------
-  // 清理所有残留的模态遮罩层（防止页面变灰）
-  // -------------------------
-  function cleanupOverlays() {
-    document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
-  }
+  };
   
   // -------------------------
   // 全局命令（方便调试）
   // -------------------------
-  window.clearLogs = function() { console.clear(); };
-  window.reloadData = async function() { cleanup(); try { await main(); } catch(e) { console.error("reloadData encountered an error:", e); } };
+  window.clearLogs = () => { console.clear(); };
+  window.reloadData = async () => { cleanup(); try { await main(); } catch(e) { console.error("reloadData encountered an error:", e); } };
   
   // -------------------------
   // 程序入口：直接运行
   // -------------------------
   injectStyles();
-  (async function(){
+  (async () => {
     if (!window.location.hostname.includes("dlsite.com")) {
       const jump = await customChoice("当前网页不是DLsite页面，是否自动跳转到DLsite购买页面？", [
         { label: "跳转", value: "y" },
