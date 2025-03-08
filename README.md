@@ -1,5 +1,5 @@
 
-<a href="https://github.com/linyaocrush/DLsite-Purchase-Analyzer/blob/main/README-JP.md" target="_blank">日本語</a>
+<a href="https://github.com/linyaocrush/DLsite-Purchase-Analyzer/blob/main/README-JP.md" target="_blank">日本語</a> <a href="https://github.com/linyaocrush/DLsite-Purchase-Analyzer/blob/main/README-JP.md" target="_blank">ENGLISH</a>
 
 # DLsite 购买分析工具
 
