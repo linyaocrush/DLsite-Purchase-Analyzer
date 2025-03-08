@@ -2,6 +2,46 @@
   "use strict";
   
   // -------------------------
+  // 辅助函数：将日期截断为年月日（忽略时分秒）
+  // -------------------------
+  const truncateDate = (date) => {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  };
+
+  // -------------------------
+  // 自定义弹窗：带额外信息（显示在右上角）的 alert
+  // -------------------------
+  const customAlertWithExtraInfo = (message, extraInfo) => {
+    return new Promise(resolve => {
+      const { overlay, modal } = createModal("600px");
+      // 在模态窗口右上角添加一个显示额外信息的 div
+      const extraDiv = document.createElement("div");
+      extraDiv.style.position = "absolute";
+      extraDiv.style.top = "10px";
+      extraDiv.style.right = "10px";
+      extraDiv.style.backgroundColor = "#f5f5f5";
+      extraDiv.style.border = "1px solid #ddd";
+      extraDiv.style.padding = "5px";
+      extraDiv.style.borderRadius = "4px";
+      extraDiv.textContent = extraInfo;
+      modal.appendChild(extraDiv);
+      
+      const msgDiv = document.createElement("pre");
+      msgDiv.style.textAlign = "left";
+      msgDiv.style.maxHeight = "400px";
+      msgDiv.style.overflowY = "auto";
+      msgDiv.textContent = message;
+      modal.appendChild(msgDiv);
+      
+      const btn = document.createElement("button");
+      btn.textContent = "确定";
+      btn.className = "btn";
+      btn.addEventListener("click", () => { closeModal(overlay, modal, resolve); });
+      modal.appendChild(btn);
+    });
+  };
+
+  // -------------------------
   // 样式注入（抽离内联样式）
   // -------------------------
   const injectStyles = () => {
@@ -27,6 +67,7 @@
         text-align: center;
         transform: scale(0.8);
         opacity: 0;
+        position: relative;
       }
       .progress-bar {
         position: fixed;
@@ -100,6 +141,7 @@
         box-shadow: 0 0 10px rgba(0,0,0,0.5);
         transform: scale(0.8);
         opacity: 0;
+        position: relative;
       }
       .md-modal h2 {
         margin-top: 0;
@@ -133,7 +175,6 @@
       th {
         background: #f2f2f2;
       }
-      /* 折叠面板样式 */
       .collapsible-section {
         border: 1px solid #ccc;
         margin-bottom: 10px;
@@ -154,7 +195,7 @@
   };
   
   // -------------------------
-  // 全局变量和错误日志（采用 let/const 替换 var）
+  // 全局变量和错误日志
   // -------------------------
   let genreChartObj = null;
   let makerChartObj = null;
@@ -165,7 +206,7 @@
   let makerChartType = 'bar';
   
   // -------------------------
-  // 通用日志输出（使用箭头函数）
+  // 通用日志输出
   // -------------------------
   const styledLog = (message, style = "", type = "log") => {
     const logFns = { log: console.log, warn: console.warn, error: console.error, info: console.info };
@@ -174,27 +215,22 @@
   window.styledLog = styledLog;
   
   // -------------------------
-  // 创建折叠面板（在标题前添加一个箭头指示）
+  // 创建折叠面板
   // -------------------------
   const createCollapsibleSection = (titleText, contentHtml, collapsed = false) => {
     const section = document.createElement("div");
     section.className = "collapsible-section";
-    
     const header = document.createElement("h3");
     header.className = "collapsible-header";
-    
     const indicator = document.createElement("span");
     indicator.style.marginRight = "5px";
     indicator.textContent = collapsed ? "►" : "▼";
-    
     header.appendChild(indicator);
     header.appendChild(document.createTextNode(titleText));
-    
     const content = document.createElement("div");
     content.className = "collapsible-content";
     content.innerHTML = contentHtml;
     content.style.display = collapsed ? "none" : "block";
-    
     header.addEventListener("click", () => {
       if (content.style.display === "none") {
         content.style.display = "block";
@@ -204,14 +240,13 @@
         indicator.textContent = "►";
       }
     });
-    
     section.appendChild(header);
     section.appendChild(content);
     return section;
   };
   
   // -------------------------
-  // 创建结果窗口（与数据图窗口类似，可拖拽、缩放，默认尺寸为数据图的2倍）
+  // 创建结果窗口
   // -------------------------
   const createResultWindow = () => {
     let container = document.getElementById("resultWindow");
@@ -219,7 +254,6 @@
       container = document.createElement("div");
       container.id = "resultWindow";
       container.className = "chart-container";
-      // 默认宽 1000px，高 800px
       container.style.top = "200px";
       container.style.left = "200px";
       container.style.width = "1000px";
@@ -227,20 +261,16 @@
       container.style.minWidth = "300px";
       container.style.minHeight = "200px";
       container.style.resize = "both";
-      // 设置容器内自己滚动，而不是整个网页滚动
       container.style.overflowY = "auto";
       container.style.overflowX = "hidden";
       document.body.appendChild(container);
-      
       const dragButton = document.createElement("div");
       dragButton.className = "drag-button";
       dragButton.innerHTML = "≡";
       container.appendChild(dragButton);
-      
       const contentDiv = document.createElement("div");
       contentDiv.className = "chart-content";
       container.appendChild(contentDiv);
-      
       makeDraggable(container, dragButton);
       return contentDiv;
     }
@@ -248,12 +278,11 @@
   };
   
   // -------------------------
-  // 将所有统计及相关信息显示到结果窗口中
+  // 将统计结果显示到结果窗口
   // -------------------------
   const displayResults = (result, exchangeRate, filteredGenreCount, filteredMakerCount) => {
     const contentDiv = createResultWindow();
     contentDiv.innerHTML = "";
-    
     const overviewHtml = `
       <table>
         <tr>
@@ -271,7 +300,6 @@
       </table>
     `;
     contentDiv.appendChild(createCollapsibleSection("统计概览", overviewHtml, false));
-    
     const genreHtml = `
       <table>
         <tr>
@@ -287,7 +315,6 @@
       </table>
     `;
     contentDiv.appendChild(createCollapsibleSection("各类型作品数排名", genreHtml, false));
-    
     const makerHtml = `
       <table>
         <tr>
@@ -303,7 +330,6 @@
       </table>
     `;
     contentDiv.appendChild(createCollapsibleSection("各制作组作品数排名", makerHtml, false));
-    
     const eolHtml = result.eol.length > 0 ? `
       <table>
         <tr>
@@ -323,12 +349,13 @@
       </table>
     ` : `<p>暂无已下架作品</p>`;
     contentDiv.appendChild(createCollapsibleSection("已下架作品", eolHtml, false));
-    
     let timelineHtml = "";
     const timelineGroups = {};
     result.works.forEach(work => {
-      if(!timelineGroups[work.date]) timelineGroups[work.date] = [];
-      timelineGroups[work.date].push(work);
+      // 将日期统一转换为 YYYY-MM-DD 格式
+      let day = new Date(work.date).toISOString().slice(0,10);
+      if(!timelineGroups[day]) timelineGroups[day] = [];
+      timelineGroups[day].push(work);
     });
     const sortedDates = Object.keys(timelineGroups).sort();
     sortedDates.forEach(date => {
@@ -349,13 +376,11 @@
       timelineHtml += `<div><strong>${date} (${timelineGroups[date].length} 项)</strong>${tableHtml}</div>`;
     });
     contentDiv.appendChild(createCollapsibleSection("时间轴视图", timelineHtml, true));
-    
     const authorHtml = `
       <p>★ 本脚本由 凛遥crush 修改制作 ★</p>
       <p>★ 项目地址：<a href="https://github.com/linyaocrush/DLsite-Purchase-Analyzer" target="_blank">https://github.com/linyaocrush/DLsite-Purchase-Analyzer</a></p>
     `;
     contentDiv.appendChild(createCollapsibleSection("作者信息", authorHtml, false));
-    
     if (errorLogs.length > 0) {
       const errorHtml = `<pre>${errorLogs.join("\n")}</pre>`;
       contentDiv.appendChild(createCollapsibleSection("错误日志", errorHtml, false));
@@ -381,7 +406,7 @@
   };
   
   // -------------------------
-  // 创建可拖拽并支持缩放的窗口（数据图和结果窗口均采用）
+  // 创建可拖拽图表容器，并添加右上角保存按钮
   // -------------------------
   const createChartContainer = (id, top, left, width = "500px", height = "400px") => {
     let container = document.getElementById(id);
@@ -406,17 +431,38 @@
       dragButton.innerHTML = "≡";
       container.appendChild(dragButton);
       
+      // 添加保存按钮
+      const saveButton = document.createElement("button");
+      saveButton.textContent = "保存";
+      saveButton.className = "btn";
+      saveButton.style.position = "absolute";
+      saveButton.style.top = "5px";
+      saveButton.style.right = "5px";
+      saveButton.style.zIndex = "101";
+      saveButton.addEventListener("click", () => {
+         const canvas = container.querySelector("canvas");
+         if(canvas){
+            const url = canvas.toDataURL("image/png");
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = container.id + ".png";
+            a.click();
+         }
+      });
+      container.appendChild(saveButton);
+      
       const contentDiv = document.createElement("div");
       contentDiv.className = "chart-content";
       container.appendChild(contentDiv);
       
       makeDraggable(container, dragButton);
+      return container;
     }
     return container;
   };
   
   // -------------------------
-  // 让窗口可拖拽（使用箭头函数，采用 pageX/pageY 避免拖动时跳顶）
+  // 让窗口可拖拽
   // -------------------------
   const makeDraggable = (element, handle) => {
     let offsetX, offsetY;
@@ -444,7 +490,7 @@
   };
   
   // -------------------------
-  // 动画函数：使用 gsap 或 CSS 过渡
+  // 动画函数
   // -------------------------
   const fadeIn = (element) => {
     if (typeof gsap !== "undefined") {
@@ -504,7 +550,7 @@
   };
   
   // -------------------------
-  // 统一创建模态窗口（用于交互提示）
+  // 统一创建模态窗口
   // -------------------------
   const createModal = (maxWidth) => {
     const overlay = document.createElement("div");
@@ -606,13 +652,13 @@
   };
   
   // -------------------------
-  // 新增：下拉菜单选择时间段（仅显示有购买记录的日期）的功能
+  // 新增：下拉菜单选择时间段和对比方面的功能
   // -------------------------
   const customSelectPeriods = (availableDates) => {
     return new Promise(resolve => {
       const { overlay, modal } = createModal("500px");
       const title = document.createElement("h2");
-      title.textContent = "选择时间段进行数据对比分析";
+      title.textContent = "选择时间段及对比方面";
       modal.appendChild(title);
       
       // 时间段1
@@ -679,7 +725,35 @@
       period2Container.appendChild(period2EndSelect);
       modal.appendChild(period2Container);
       
-      // 按钮
+      // 对比方面复选框区域
+      const aspectsContainer = document.createElement("div");
+      aspectsContainer.style.margin = "10px 0";
+      const aspectsTitle = document.createElement("div");
+      aspectsTitle.textContent = "请选择对比的方面：";
+      aspectsContainer.appendChild(aspectsTitle);
+      const aspects = [
+        { label: "不同类型作品偏好对比", value: "prefType" },
+        { label: "不同制作组偏好对比", value: "prefMaker" },
+        { label: "不同制作组对比", value: "makerOverall" },
+        { label: "制作组作品类型对比", value: "makerType" }
+      ];
+      const checkboxes = {};
+      aspects.forEach(item => {
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = item.value;
+        checkbox.id = "chk_" + item.value;
+        checkboxes[item.value] = checkbox;
+        const label = document.createElement("label");
+        label.htmlFor = checkbox.id;
+        label.textContent = item.label;
+        aspectsContainer.appendChild(checkbox);
+        aspectsContainer.appendChild(label);
+        aspectsContainer.appendChild(document.createElement("br"));
+      });
+      modal.appendChild(aspectsContainer);
+      
+      // 按钮区域
       const btnContainer = document.createElement("div");
       btnContainer.style.marginTop = "15px";
       const okBtn = document.createElement("button");
@@ -705,10 +779,17 @@
           customAlert("时间段2的开始日期不能晚于结束日期。");
           return;
         }
+        const selectedAspects = {
+          prefType: checkboxes["prefType"].checked,
+          prefMaker: checkboxes["prefMaker"].checked,
+          makerOverall: checkboxes["makerOverall"].checked,
+          makerType: checkboxes["makerType"].checked
+        };
         closeModal(overlay, modal, () => {
           resolve({
             period1: { start: new Date(p1Start), end: new Date(p1End) },
-            period2: { start: new Date(p2Start), end: new Date(p2End) }
+            period2: { start: new Date(p2Start), end: new Date(p2End) },
+            aspects: selectedAspects
           });
         });
       });
@@ -728,7 +809,7 @@
   };
   
   // -------------------------
-  // Chart.js 加载（异步加载）
+  // Chart.js 加载
   // -------------------------
   const loadChartJs = async () => {
     if (typeof Chart === "undefined") {
@@ -743,7 +824,7 @@
   };
   
   // -------------------------
-  // fetchUrlAsync：统一请求封装及错误处理
+  // fetchUrlAsync
   // -------------------------
   const fetchUrlAsync = async (url) => {
     try {
@@ -757,16 +838,14 @@
   };
   
   // -------------------------
-  // 图表绘制函数：作品类型统计（仅在 detailMode 为 true 时显示）
+  // 图表绘制函数：作品类型统计
   // -------------------------
   const drawGenreChart = (filteredGenreCount, works) => {
     const container = createChartContainer("chartContainer1", "100px", "100px");
     const contentDiv = container.querySelector(".chart-content");
     contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">
       作品类型统计 
-      <button id="toggleGenreChartBtn" class="btn" style="margin-left: 10px; font-size: 12px;">
-        切换为${genreChartType === 'bar' ? '饼状图' : '柱状图'}
-      </button>
+      <button id="toggleGenreChartBtn" class="btn" style="margin-left: 10px; font-size: 12px;">切换为${genreChartType === 'bar' ? '饼状图' : '柱状图'}</button>
     </h3>`;
     const canvas = document.createElement("canvas");
     canvas.style.width = "100%";
@@ -774,7 +853,6 @@
     contentDiv.appendChild(canvas);
     const ctx = canvas.getContext("2d");
     if (genreChartObj) { genreChartObj.destroy(); }
-    
     let backgroundColors, borderColors, options;
     if (genreChartType === 'pie') {
       backgroundColors = filteredGenreCount.map((_, i) => `hsl(${(i * 360 / filteredGenreCount.length)}, 70%, 70%)`);
@@ -785,7 +863,6 @@
       borderColors = "rgba(75, 192, 192, 1)";
       options = { scales: { y: { beginAtZero: true } } };
     }
-    // 点击时显示该类型下的详细作品信息
     options.onClick = (evt, elements) => {
       if (elements.length > 0) {
         const index = elements[0].index;
@@ -798,7 +875,6 @@
         customAlert(content);
       }
     };
-    
     genreChartObj = new Chart(ctx, {
       type: genreChartType,
       data: {
@@ -813,7 +889,6 @@
       },
       options: options
     });
-    
     setTimeout(() => {
       const btn = document.getElementById("toggleGenreChartBtn");
       if (btn) {
@@ -826,16 +901,14 @@
   };
   
   // -------------------------
-  // 图表绘制函数：制作组统计（添加切换按钮）
+  // 图表绘制函数：制作组统计
   // -------------------------
   const drawMakerChart = (filteredMakerCount, works) => {
     const container = createChartContainer("chartContainer2", "100px", "650px");
     const contentDiv = container.querySelector(".chart-content");
     contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">
       制作组统计 
-      <button id="toggleMakerChartBtn" class="btn" style="margin-left: 10px; font-size: 12px;">
-        切换为${makerChartType === 'bar' ? '饼状图' : '柱状图'}
-      </button>
+      <button id="toggleMakerChartBtn" class="btn" style="margin-left: 10px; font-size: 12px;">切换为${makerChartType === 'bar' ? '饼状图' : '柱状图'}</button>
     </h3>`;
     const canvas = document.createElement("canvas");
     canvas.style.width = "100%";
@@ -843,7 +916,6 @@
     contentDiv.appendChild(canvas);
     const ctx = canvas.getContext("2d");
     if (makerChartObj) { makerChartObj.destroy(); }
-    
     let backgroundColors, borderColors, options;
     if (makerChartType === 'pie') {
       backgroundColors = filteredMakerCount.map((_, i) => `hsl(${(i * 360 / filteredMakerCount.length)}, 70%, 70%)`);
@@ -854,7 +926,6 @@
       borderColors = "rgba(153, 102, 255, 1)";
       options = { scales: { y: { beginAtZero: true } } };
     }
-    // 点击时显示该制作组下的详细作品信息
     options.onClick = (evt, elements) => {
       if (elements.length > 0) {
         const index = elements[0].index;
@@ -867,7 +938,6 @@
         customAlert(content);
       }
     };
-    
     makerChartObj = new Chart(ctx, {
       type: makerChartType,
       data: {
@@ -882,7 +952,6 @@
       },
       options: options
     });
-    
     setTimeout(() => {
       const btn = document.getElementById("toggleMakerChartBtn");
       if (btn) {
@@ -897,7 +966,8 @@
   const drawTimelineChart = (works) => {
     const groups = {};
     works.forEach(work => {
-      groups[work.date] = (groups[work.date] || 0) + 1;
+      let day = new Date(work.date).toISOString().slice(0,10);
+      groups[day] = (groups[day] || 0) + 1;
     });
     const sortedDates = Object.keys(groups).sort();
     const counts = sortedDates.map(date => groups[date]);
@@ -915,12 +985,11 @@
         x: { title: { display: true, text: '购买日期' } },
         y: { beginAtZero: true, title: { display: true, text: '购买数量' } }
       },
-      // 点击时显示该日期的详细作品信息
       onClick: (evt, elements) => {
         if (elements.length > 0) {
           const index = elements[0].index;
           const date = sortedDates[index];
-          const worksOnDate = works.filter(work => work.date === date);
+          const worksOnDate = works.filter(work => new Date(work.date).toISOString().slice(0,10) === date);
           let content = `日期: ${date}\n购买数量: ${worksOnDate.length}\n\n`;
           worksOnDate.forEach(work => {
             content += `作品名称: ${work.name}\n制作组: ${work.makerName}\n价格: ${work.price} 日元\n\n`;
@@ -949,7 +1018,8 @@
   const drawCumulativeChart = (works) => {
     const groups = {};
     works.forEach(work => {
-      groups[work.date] = (groups[work.date] || 0) + work.price;
+      let day = new Date(work.date).toISOString().slice(0,10);
+      groups[day] = (groups[day] || 0) + work.price;
     });
     const sortedDates = Object.keys(groups).sort();
     let cumulative = [];
@@ -969,17 +1039,18 @@
         x: { title: { display: true, text: '购买日期' } },
         y: { beginAtZero: true, title: { display: true, text: '累计金额' } }
       },
-      // 点击时显示该日期的详细累计信息（列出当日所有作品）
       onClick: (evt, elements) => {
         if (elements.length > 0) {
           const index = elements[0].index;
           const date = sortedDates[index];
-          const worksOnDate = works.filter(work => work.date === date);
+          const worksOnDate = works.filter(work => new Date(work.date).toISOString().slice(0,10) === date);
           let content = `日期: ${date}\n当日作品: ${worksOnDate.length}\n\n`;
           worksOnDate.forEach(work => {
             content += `作品名称: ${work.name}\n制作组: ${work.makerName}\n价格: ${work.price} 日元\n\n`;
           });
-          customAlert(content);
+          // 计算当天总购买金额（不含累计）
+          const dayTotal = worksOnDate.reduce((sum, work) => sum + work.price, 0);
+          customAlertWithExtraInfo(content, "当天总价：" + dayTotal + " 日元");
         }
       }
     };
@@ -1001,106 +1072,146 @@
   };
   
   // -------------------------
-  // 新增：数据对比功能——比较两个时间段的购买数据，并生成统计和对比图表
+  // 新增：绘制组合柱状图（对比数据）
   // -------------------------
-  const comparePeriods = (result, period1, period2, exchangeRate) => {
-    const works1 = result.works.filter(work => {
-      const d = new Date(work.date);
-      return d >= period1.start && d <= period1.end;
-    });
-    const works2 = result.works.filter(work => {
-      const d = new Date(work.date);
-      return d >= period2.start && d <= period2.end;
-    });
-    const count1 = works1.length;
-    const totalPrice1 = works1.reduce((sum, work) => sum + work.price, 0);
-    const count2 = works2.length;
-    const totalPrice2 = works2.reduce((sum, work) => sum + work.price, 0);
-    const summary = `
-数据对比分析结果：
-时间段 1 (${period1.start.toLocaleDateString()} ~ ${period1.end.toLocaleDateString()}):
-   购买数量: ${count1} 部
-   总消费金额: ${totalPrice1} 日元 (${(totalPrice1 * exchangeRate).toFixed(2)} 人民币)
-
-时间段 2 (${period2.start.toLocaleDateString()} ~ ${period2.end.toLocaleDateString()}):
-   购买数量: ${count2} 部
-   总消费金额: ${totalPrice2} 日元 (${(totalPrice2 * exchangeRate).toFixed(2)} 人民币)
-
-数量差异: ${count2 - count1} 部
-消费金额差异: ${totalPrice2 - totalPrice1} 日元
-    `;
-    customAlert(summary);
-    drawComparisonChart(count1, count2, totalPrice1, totalPrice2, 
-       `${period1.start.toLocaleDateString()} ~ ${period1.end.toLocaleDateString()}`,
-       `${period2.start.toLocaleDateString()} ~ ${period2.end.toLocaleDateString()}`);
-  };
-  
-  // 修改后的对比图表函数，使用双坐标轴分别显示两个指标
-  const drawComparisonChart = (count1, count2, totalPrice1, totalPrice2, label1, label2) => {
-    const container = createChartContainer("comparisonChart", "850px", "100px", "600px", "400px");
+  const drawCombinedBarChart = (title, labels, data1, data2, label1, label2, yAxisLabel) => {
+    const container = createChartContainer("combinedChart" + title, "900px", "100px", "600px", "400px");
     const contentDiv = container.querySelector(".chart-content");
-    contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">数据对比分析</h3>`;
+    contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">${title}</h3>`;
     const canvas = document.createElement("canvas");
     canvas.style.width = "100%";
     canvas.style.height = "calc(100% - 30px)";
     contentDiv.appendChild(canvas);
     const ctx = canvas.getContext("2d");
     new Chart(ctx, {
-         type: 'bar',
-         data: {
-             labels: ["购买数量", "消费金额 (日元)"],
-             datasets: [{
-                 label: label1 + " 购买数量",
-                 data: [count1, null],
-                 backgroundColor: "rgba(75, 192, 192, 0.6)",
-                 borderColor: "rgba(75, 192, 192, 1)",
-                 borderWidth: 1,
-                 yAxisID: 'y'
-             },{
-                 label: label2 + " 购买数量",
-                 data: [count2, null],
-                 backgroundColor: "rgba(75, 192, 192, 0.3)",
-                 borderColor: "rgba(75, 192, 192, 1)",
-                 borderWidth: 1,
-                 yAxisID: 'y'
-             },{
-                 label: label1 + " 消费金额",
-                 data: [null, totalPrice1],
-                 backgroundColor: "rgba(153, 102, 255, 0.6)",
-                 borderColor: "rgba(153, 102, 255, 1)",
-                 borderWidth: 1,
-                 yAxisID: 'y1'
-             },{
-                 label: label2 + " 消费金额",
-                 data: [null, totalPrice2],
-                 backgroundColor: "rgba(153, 102, 255, 0.3)",
-                 borderColor: "rgba(153, 102, 255, 1)",
-                 borderWidth: 1,
-                 yAxisID: 'y1'
-             }]
-         },
-         options: {
-            scales: {
-              y: {
-                type: 'linear',
-                position: 'left',
-                beginAtZero: true,
-                title: { display: true, text: '购买数量' }
-              },
-              y1: {
-                type: 'linear',
-                position: 'right',
-                beginAtZero: true,
-                title: { display: true, text: '消费金额 (日元)' },
-                grid: { drawOnChartArea: false }
-              }
-            }
-         }
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: label1,
+          data: data1,
+          backgroundColor: "rgba(75, 192, 192, 0.6)",
+          borderColor: "rgba(75, 192, 192, 1)",
+          borderWidth: 1
+        },{
+          label: label2,
+          data: data2,
+          backgroundColor: "rgba(153, 102, 255, 0.6)",
+          borderColor: "rgba(153, 102, 255, 1)",
+          borderWidth: 1
+        }]
+      },
+      options: {
+        scales: {
+          y: { beginAtZero: true, title: { display: true, text: yAxisLabel } }
+        }
+      }
     });
   };
   
   // -------------------------
-  // 清理函数：移除特定 DOM 元素并重置图表变量
+  // 新增：数据对比分析，包含多个方面
+  // -------------------------
+  const compareAllAspects = (result, periods, exchangeRate, aspects) => {
+    let summary = "";
+    // ① 用户偏好对比 - 不同类型作品
+    if (aspects.prefType) {
+      const genreCounts1 = {};
+      const genreCounts2 = {};
+      result.works.forEach(work => {
+        const d = truncateDate(new Date(work.date));
+        if(d >= truncateDate(periods.period1.start) && d <= truncateDate(periods.period1.end)) {
+          genreCounts1[work.genre] = (genreCounts1[work.genre] || 0) + 1;
+        }
+        if(d >= truncateDate(periods.period2.start) && d <= truncateDate(periods.period2.end)) {
+          genreCounts2[work.genre] = (genreCounts2[work.genre] || 0) + 1;
+        }
+      });
+      summary += "【不同类型作品偏好对比】\n时间段1：" + JSON.stringify(genreCounts1) + "\n时间段2：" + JSON.stringify(genreCounts2) + "\n\n";
+      const allGenres = Array.from(new Set([...Object.keys(genreCounts1), ...Object.keys(genreCounts2)]));
+      const data1 = allGenres.map(g => genreCounts1[g] || 0);
+      const data2 = allGenres.map(g => genreCounts2[g] || 0);
+      drawCombinedBarChart("不同类型作品偏好对比", allGenres, data1, data2, "时间段1", "时间段2", "数量");
+    }
+    // ② 用户偏好对比 - 不同制作组
+    if (aspects.prefMaker) {
+      const makerCounts1 = {};
+      const makerCounts2 = {};
+      result.works.forEach(work => {
+        const d = truncateDate(new Date(work.date));
+        if(d >= truncateDate(periods.period1.start) && d <= truncateDate(periods.period1.end)) {
+          makerCounts1[work.makerName] = (makerCounts1[work.makerName] || 0) + 1;
+        }
+        if(d >= truncateDate(periods.period2.start) && d <= truncateDate(periods.period2.end)) {
+          makerCounts2[work.makerName] = (makerCounts2[work.makerName] || 0) + 1;
+        }
+      });
+      summary += "【不同制作组偏好对比】\n时间段1：" + JSON.stringify(makerCounts1) + "\n时间段2：" + JSON.stringify(makerCounts2) + "\n\n";
+      const allMakers = Array.from(new Set([...Object.keys(makerCounts1), ...Object.keys(makerCounts2)]));
+      const mData1 = allMakers.map(m => makerCounts1[m] || 0);
+      const mData2 = allMakers.map(m => makerCounts2[m] || 0);
+      drawCombinedBarChart("不同制作组偏好对比", allMakers, mData1, mData2, "时间段1", "时间段2", "数量");
+    }
+    // ③ 制作组对比 - 整体制作组（购买数量和消费金额）
+    if (aspects.makerOverall) {
+      const makerData1 = {};
+      const makerData2 = {};
+      result.works.forEach(work => {
+        const d = truncateDate(new Date(work.date));
+        if(d >= truncateDate(periods.period1.start) && d <= truncateDate(periods.period1.end)) {
+          if(!makerData1[work.makerName]) makerData1[work.makerName] = {count: 0, total: 0};
+          makerData1[work.makerName].count++;
+          makerData1[work.makerName].total += work.price;
+        }
+        if(d >= truncateDate(periods.period2.start) && d <= truncateDate(periods.period2.end)) {
+          if(!makerData2[work.makerName]) makerData2[work.makerName] = {count: 0, total: 0};
+          makerData2[work.makerName].count++;
+          makerData2[work.makerName].total += work.price;
+        }
+      });
+      summary += "【不同制作组对比】\n时间段1：" + JSON.stringify(makerData1) + "\n时间段2：" + JSON.stringify(makerData2) + "\n\n";
+      const allMakers = Array.from(new Set([...Object.keys(makerData1), ...Object.keys(makerData2)]));
+      const countData1 = allMakers.map(m => makerData1[m] ? makerData1[m].count : 0);
+      const countData2 = allMakers.map(m => makerData2[m] ? makerData2[m].count : 0);
+      drawCombinedBarChart("不同制作组对比 - 购买数量", allMakers, countData1, countData2, "时间段1", "时间段2", "数量");
+      const totalData1 = allMakers.map(m => makerData1[m] ? makerData1[m].total : 0);
+      const totalData2 = allMakers.map(m => makerData2[m] ? makerData2[m].total : 0);
+      drawCombinedBarChart("不同制作组对比 - 消费金额 (日元)", allMakers, totalData1, totalData2, "时间段1", "时间段2", "金额");
+    }
+    // ④ 制作组作品类型对比
+    if (aspects.makerType) {
+      const makers1 = new Set(result.works.filter(work => truncateDate(new Date(work.date)) >= truncateDate(periods.period1.start) && truncateDate(new Date(work.date)) <= truncateDate(periods.period1.end)).map(work => work.makerName));
+      const makers2 = new Set(result.works.filter(work => truncateDate(new Date(work.date)) >= truncateDate(periods.period2.start) && truncateDate(new Date(work.date)) <= truncateDate(periods.period2.end)).map(work => work.makerName));
+      const commonMakers = [...makers1].filter(x => makers2.has(x));
+      if(commonMakers.length === 0) {
+         customAlert("两个时间段内没有共同的制作组记录，无法进行制作组作品类型对比。");
+      } else {
+         customChoice("请选择一个制作组进行作品类型对比：", commonMakers.map(m => ({label: m, value: m}))).then(selectedMaker => {
+             const genreData1 = {};
+             const genreData2 = {};
+             result.works.forEach(work => {
+                if(work.makerName === selectedMaker) {
+                   const d = truncateDate(new Date(work.date));
+                   if(d >= truncateDate(periods.period1.start) && d <= truncateDate(periods.period1.end)) {
+                      genreData1[work.genre] = (genreData1[work.genre] || 0) + 1;
+                   }
+                   if(d >= truncateDate(periods.period2.start) && d <= truncateDate(periods.period2.end)) {
+                      genreData2[work.genre] = (genreData2[work.genre] || 0) + 1;
+                   }
+                }
+             });
+             const allGenres = Array.from(new Set([...Object.keys(genreData1), ...Object.keys(genreData2)]));
+             const gData1 = allGenres.map(g => genreData1[g] || 0);
+             const gData2 = allGenres.map(g => genreData2[g] || 0);
+             drawCombinedBarChart(`制作组【${selectedMaker}】作品类型对比`, allGenres, gData1, gData2, "时间段1", "时间段2", "数量");
+         });
+      }
+    }
+    customAlert(summary);
+  };
+  
+  // -------------------------
+  // 清理函数
   // -------------------------
   const cleanup = () => {
     const ids = ["progressBar", "chartContainer1", "chartContainer2", "chartContainer3", "chartContainer4", "resultWindow", "comparisonChart"];
@@ -1111,7 +1222,6 @@
     genreChartObj = makerChartObj = timelineChartObj = cumulativeChartObj = null;
   };
   
-  // 清理所有残留的模态遮罩层，防止页面变灰
   const cleanupOverlays = () => {
     document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
   };
@@ -1189,14 +1299,12 @@
   const main = async () => {
     cleanup();
     styledLog("✦ DLsite购买历史统计 ✦", "font-size: 28px; font-weight: bold; color: white; background: linear-gradient(to right, #ff6347, #ff1493, #8a2be2, #32cd32); padding: 10px; border-radius: 8px;");
-    
     let detailMode = true;
     const quickView = await customChoice("是否开启快速查看消费金额？（仅统计金额）", [
       { label: "是", value: "y" },
       { label: "否", value: "n" }
     ]);
     if (quickView.toLowerCase() === "y") detailMode = false;
-    
     let dlurl = "https://www.dlsite.com/maniax/mypage/userbuy/=/type/all/start/all/sort/1/order/1/page/";
     if (detailMode) {
       const typeOptionsArr = [
@@ -1219,7 +1327,6 @@
     } else {
       dlurl = dlurl.replace(/type\/[^/]+/, "type/all");
     }
-    
     let exchangeRate = 0.04858;
     if (detailMode) {
       const exchangeChoice = await customChoice("是否需要修改汇率？", [
@@ -1235,13 +1342,11 @@
         styledLog("✔️ 使用默认汇率 1人民币 = 0.04858日元", "color: green; font-weight: bold;", "info");
       }
     }
-    
     console.group("📄 页面抓取进度");
     const result = await fetchAllPages(dlurl, detailMode, (page, total) => {
       updateProgressBar((page / total) * 100);
     });
     console.groupEnd();
-    
     const excludeResponse = await customPrompt("请输入要排除的最少作品数目（例如输入 3 表示排除数目小于 3 的作品类型）：", "0");
     let excludeThreshold = 0;
     if (excludeResponse) {
@@ -1253,12 +1358,10 @@
     } else {
       styledLog("ℹ️ 未输入数值，使用默认值 0（不过滤）", "color: #666666; font-weight: bold;", "info");
     }
-    
     result.genreCount = [...result.genreCount.entries()].sort((a, b) => b[1] - a[1]);
     result.makerCount = [...result.makerCount.entries()].sort((a, b) => b[1] - a[1]);
     const filteredGenreCount = excludeThreshold === 0 ? result.genreCount : result.genreCount.filter(([, count]) => count >= excludeThreshold);
     const filteredMakerCount = excludeThreshold === 0 ? result.makerCount : result.makerCount.filter(([, count]) => count >= excludeThreshold);
-    
     const showChart = await customChoice("是否显示图表数据展示？", [
       { label: "显示", value: "y" },
       { label: "不显示", value: "n" }
@@ -1272,11 +1375,9 @@
       drawTimelineChart(result.works);
       drawCumulativeChart(result.works);
     }
-    
-    // 直接显示统计结果窗口
     displayResults(result, exchangeRate, filteredGenreCount, filteredMakerCount);
     
-    // 在页面左上角添加“下载文件”按钮
+    // 添加“下载文件”按钮
     const addDownloadButton = () => {
       const downloadBtn = document.createElement("button");
       downloadBtn.textContent = "下载文件";
@@ -1358,7 +1459,7 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
     };
     addDownloadButton();
     
-    // 在页面左上角添加“数据对比分析”按钮
+    // 添加“数据对比分析”按钮
     const addComparisonButton = () => {
       const compBtn = document.createElement("button");
       compBtn.textContent = "数据对比分析";
@@ -1368,22 +1469,20 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
       compBtn.style.left = "120px";
       compBtn.style.zIndex = "100001";
       compBtn.addEventListener("click", async () => {
-        // 提取所有有购买记录的日期（去重并排序）
-        const uniqueDates = [...new Set(result.works.map(work => work.date))].sort((a,b) => new Date(a) - new Date(b));
+        // 将购买日期统一转换为 YYYY-MM-DD 格式
+        const uniqueDates = [...new Set(result.works.map(work => new Date(work.date).toISOString().slice(0,10)))].sort();
         if(uniqueDates.length === 0) {
           await customAlert("没有可供选择的购买日期记录。");
           return;
         }
         const periods = await customSelectPeriods(uniqueDates);
         if(periods) {
-          comparePeriods(result, periods.period1, periods.period2, exchangeRate);
+          compareAllAspects(result, periods, exchangeRate, periods.aspects);
         }
       });
       document.body.appendChild(compBtn);
     };
     addComparisonButton();
-    
-    // 清理残留的模态遮罩层，确保页面正常交互
     cleanupOverlays();
   };
   
@@ -1428,7 +1527,7 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
   };
   
   // -------------------------
-  // 全局命令（方便调试）
+  // 全局命令
   // -------------------------
   window.clearLogs = () => { console.clear(); };
   window.reloadData = async () => { cleanup(); try { await main(); } catch(e) { console.error("reloadData encountered an error:", e); } };
