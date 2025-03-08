@@ -9,12 +9,20 @@
   };
 
   // -------------------------
-  // 自定义弹窗：带额外信息（显示在右上角）的 alert
+  // 日志输出函数
+  // -------------------------
+  const styledLog = (message, style = "", type = "log") => {
+    const logFns = { log: console.log, warn: console.warn, error: console.error, info: console.info };
+    logFns[type](`%c${message}`, style);
+  };
+
+  // -------------------------
+  // 自定义弹窗：带额外信息显示（例如右上角显示当天总价）
   // -------------------------
   const customAlertWithExtraInfo = (message, extraInfo) => {
     return new Promise(resolve => {
       const { overlay, modal } = createModal("600px");
-      // 在模态窗口右上角添加一个显示额外信息的 div
+      // 在模态窗口右上角添加一个显示额外信息的区域
       const extraDiv = document.createElement("div");
       extraDiv.style.position = "absolute";
       extraDiv.style.top = "10px";
@@ -42,7 +50,7 @@
   };
 
   // -------------------------
-  // 样式注入（抽离内联样式）
+  // 样式注入
   // -------------------------
   const injectStyles = () => {
     const style = document.createElement('style');
@@ -190,12 +198,36 @@
       .collapsible-content {
         padding: 10px;
       }
+      #hiddenChartsContainer {
+        position: fixed;
+        right: 10px;
+        top: 10px;
+        z-index: 110000;
+      }
+      #comparisonChartsContainer {
+        position: fixed;
+        top: 50px;
+        left: 50px;
+        width: 600px;
+        max-height: 80%;
+        overflow-y: auto;
+        background: #fff;
+        border: 2px solid #ccc;
+        border-radius: 8px;
+        padding: 10px;
+        z-index: 100010;
+      }
     `;
     document.head.appendChild(style);
   };
-  
+
   // -------------------------
-  // 全局变量和错误日志
+  // 全局 z-index 计数器
+  // -------------------------
+  let currentZIndex = 100001;
+
+  // -------------------------
+  // 全局变量和错误日志（只声明一次）
   // -------------------------
   let genreChartObj = null;
   let makerChartObj = null;
@@ -204,16 +236,7 @@
   let errorLogs = [];
   let genreChartType = 'bar';
   let makerChartType = 'bar';
-  
-  // -------------------------
-  // 通用日志输出
-  // -------------------------
-  const styledLog = (message, style = "", type = "log") => {
-    const logFns = { log: console.log, warn: console.warn, error: console.error, info: console.info };
-    logFns[type](`%c${message}`, style);
-  };
-  window.styledLog = styledLog;
-  
+
   // -------------------------
   // 创建折叠面板
   // -------------------------
@@ -244,9 +267,9 @@
     section.appendChild(content);
     return section;
   };
-  
+
   // -------------------------
-  // 创建结果窗口
+  // 创建结果窗口（类似图表容器，可置顶、隐藏）
   // -------------------------
   const createResultWindow = () => {
     let container = document.getElementById("resultWindow");
@@ -263,20 +286,85 @@
       container.style.resize = "both";
       container.style.overflowY = "auto";
       container.style.overflowX = "hidden";
+      container.style.zIndex = currentZIndex++;
       document.body.appendChild(container);
+      
       const dragButton = document.createElement("div");
       dragButton.className = "drag-button";
       dragButton.innerHTML = "≡";
       container.appendChild(dragButton);
+      
+      // 隐藏按钮
+      const hideButton = document.createElement("button");
+      hideButton.textContent = "隐藏";
+      hideButton.className = "btn";
+      hideButton.style.position = "absolute";
+      hideButton.style.top = "5px";
+      hideButton.style.right = "60px";
+      hideButton.style.zIndex = "101";
+      hideButton.addEventListener("click", () => {
+         container.style.display = "none";
+         let hiddenContainer = document.getElementById("hiddenChartsContainer");
+         if (!hiddenContainer) {
+           hiddenContainer = document.createElement("div");
+           hiddenContainer.id = "hiddenChartsContainer";
+           hiddenContainer.style.position = "fixed";
+           hiddenContainer.style.right = "10px";
+           hiddenContainer.style.top = "10px";
+           hiddenContainer.style.zIndex = "110000";
+           document.body.appendChild(hiddenContainer);
+         }
+         const restoreButton = document.createElement("button");
+         // 隐藏结果窗口后恢复按钮显示文字为“结果”
+         restoreButton.textContent = "结果";
+         restoreButton.className = "btn";
+         restoreButton.style.display = "block";
+         restoreButton.style.marginBottom = "5px";
+         restoreButton.addEventListener("click", () => {
+             container.style.display = "block";
+             hiddenContainer.removeChild(restoreButton);
+         });
+         hiddenContainer.appendChild(restoreButton);
+      });
+      container.appendChild(hideButton);
+      
+      // 保存按钮
+      const saveButton = document.createElement("button");
+      saveButton.textContent = "保存";
+      saveButton.className = "btn";
+      saveButton.style.position = "absolute";
+      saveButton.style.top = "5px";
+      saveButton.style.right = "5px";
+      saveButton.style.zIndex = "101";
+      saveButton.addEventListener("click", () => {
+         const contentDiv = container.querySelector(".chart-content");
+         if(contentDiv){
+            // 此处简单导出HTML文本作为示例
+            const blob = new Blob([contentDiv.innerHTML], { type: "text/plain" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "结果.txt";
+            a.click();
+         }
+      });
+      container.appendChild(saveButton);
+      
+      // 点击容器时置顶显示
+      container.addEventListener("mousedown", () => {
+         container.style.zIndex = currentZIndex++;
+      });
+      
       const contentDiv = document.createElement("div");
       contentDiv.className = "chart-content";
       container.appendChild(contentDiv);
+      
       makeDraggable(container, dragButton);
       return contentDiv;
     }
     return container.querySelector(".chart-content");
   };
-  
+
   // -------------------------
   // 将统计结果显示到结果窗口
   // -------------------------
@@ -352,7 +440,6 @@
     let timelineHtml = "";
     const timelineGroups = {};
     result.works.forEach(work => {
-      // 将日期统一转换为 YYYY-MM-DD 格式
       let day = new Date(work.date).toISOString().slice(0,10);
       if(!timelineGroups[day]) timelineGroups[day] = [];
       timelineGroups[day].push(work);
@@ -386,7 +473,7 @@
       contentDiv.appendChild(createCollapsibleSection("错误日志", errorHtml, false));
     }
   };
-  
+
   // -------------------------
   // 进度条更新
   // -------------------------
@@ -404,9 +491,9 @@
     }
     document.getElementById("innerProgressBar").style.width = progress + "%";
   };
-  
+
   // -------------------------
-  // 创建可拖拽图表容器，并添加右上角保存按钮
+  // 创建可拖拽图表容器，添加保存、隐藏按钮；点击容器时置顶
   // -------------------------
   const createChartContainer = (id, top, left, width = "500px", height = "400px") => {
     let container = document.getElementById(id);
@@ -424,6 +511,7 @@
       container.style.overflow = "hidden";
       container.style.boxShadow = "0 4px 8px rgba(0,0,0,0.3)";
       container.style.border = "1px solid #ccc";
+      container.style.zIndex = currentZIndex++;
       document.body.appendChild(container);
       
       const dragButton = document.createElement("div");
@@ -431,7 +519,7 @@
       dragButton.innerHTML = "≡";
       container.appendChild(dragButton);
       
-      // 添加保存按钮
+      // 保存按钮
       const saveButton = document.createElement("button");
       saveButton.textContent = "保存";
       saveButton.className = "btn";
@@ -451,6 +539,44 @@
       });
       container.appendChild(saveButton);
       
+      // 隐藏按钮
+      const hideButton = document.createElement("button");
+      hideButton.textContent = "隐藏";
+      hideButton.className = "btn";
+      hideButton.style.position = "absolute";
+      hideButton.style.top = "5px";
+      hideButton.style.right = "60px";
+      hideButton.style.zIndex = "101";
+      hideButton.addEventListener("click", () => {
+         container.style.display = "none";
+         let hiddenContainer = document.getElementById("hiddenChartsContainer");
+         if (!hiddenContainer) {
+           hiddenContainer = document.createElement("div");
+           hiddenContainer.id = "hiddenChartsContainer";
+           hiddenContainer.style.position = "fixed";
+           hiddenContainer.style.right = "10px";
+           hiddenContainer.style.top = "10px";
+           hiddenContainer.style.zIndex = "110000";
+           document.body.appendChild(hiddenContainer);
+         }
+         const restoreButton = document.createElement("button");
+         restoreButton.textContent = id === "resultWindow" ? "结果" : id;
+         restoreButton.className = "btn";
+         restoreButton.style.display = "block";
+         restoreButton.style.marginBottom = "5px";
+         restoreButton.addEventListener("click", () => {
+             container.style.display = "block";
+             hiddenContainer.removeChild(restoreButton);
+         });
+         hiddenContainer.appendChild(restoreButton);
+      });
+      container.appendChild(hideButton);
+      
+      // 点击容器时置顶显示
+      container.addEventListener("mousedown", () => {
+         container.style.zIndex = currentZIndex++;
+      });
+      
       const contentDiv = document.createElement("div");
       contentDiv.className = "chart-content";
       container.appendChild(contentDiv);
@@ -460,7 +586,7 @@
     }
     return container;
   };
-  
+
   // -------------------------
   // 让窗口可拖拽
   // -------------------------
@@ -488,7 +614,7 @@
       handle.style.cursor = "grab";
     });
   };
-  
+
   // -------------------------
   // 动画函数
   // -------------------------
@@ -536,7 +662,7 @@
       }, 10);
     }
   };
-  
+
   // -------------------------
   // 统一关闭模态窗口
   // -------------------------
@@ -548,7 +674,7 @@
       });
     });
   };
-  
+
   // -------------------------
   // 统一创建模态窗口
   // -------------------------
@@ -564,7 +690,7 @@
     animateModalIn(modal);
     return { overlay, modal };
   };
-  
+
   const customChoice = (message, options) => {
     return new Promise(resolve => {
       const { overlay, modal } = createModal("500px");
@@ -582,7 +708,7 @@
       modal.appendChild(btnContainer);
     });
   };
-  
+
   const customAlert = (message) => {
     return new Promise(resolve => {
       const { overlay, modal } = createModal("600px");
@@ -599,7 +725,7 @@
       modal.appendChild(btn);
     });
   };
-  
+
   const customPrompt = (message, defaultValue = "") => {
     return new Promise(resolve => {
       const { overlay, modal } = createModal("400px");
@@ -628,7 +754,7 @@
       modal.appendChild(btnContainer);
     });
   };
-  
+
   const customConfirm = (message) => {
     return new Promise(resolve => {
       const { overlay, modal } = createModal("400px");
@@ -650,9 +776,9 @@
       modal.appendChild(btnContainer);
     });
   };
-  
+
   // -------------------------
-  // 新增：下拉菜单选择时间段和对比方面的功能
+  // 下拉菜单选择时间段及对比方面（精确到天）
   // -------------------------
   const customSelectPeriods = (availableDates) => {
     return new Promise(resolve => {
@@ -796,7 +922,7 @@
       cancelBtn.addEventListener("click", () => { closeModal(overlay, modal, () => { resolve(null); }); });
     });
   };
-  
+
   // -------------------------
   // 文件导出相关函数
   // -------------------------
@@ -807,7 +933,7 @@
     const a = document.createElement("a");
     a.href = url; a.download = filename; a.click();
   };
-  
+
   // -------------------------
   // Chart.js 加载
   // -------------------------
@@ -822,7 +948,7 @@
       });
     }
   };
-  
+
   // -------------------------
   // fetchUrlAsync
   // -------------------------
@@ -836,17 +962,14 @@
       return "";
     }
   };
-  
+
   // -------------------------
   // 图表绘制函数：作品类型统计
   // -------------------------
   const drawGenreChart = (filteredGenreCount, works) => {
     const container = createChartContainer("chartContainer1", "100px", "100px");
     const contentDiv = container.querySelector(".chart-content");
-    contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">
-      作品类型统计 
-      <button id="toggleGenreChartBtn" class="btn" style="margin-left: 10px; font-size: 12px;">切换为${genreChartType === 'bar' ? '饼状图' : '柱状图'}</button>
-    </h3>`;
+    contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">作品类型统计 <button id="toggleGenreChartBtn" class="btn" style="margin-left: 10px; font-size: 12px;">切换为${genreChartType === 'bar' ? '饼状图' : '柱状图'}</button></h3>`;
     const canvas = document.createElement("canvas");
     canvas.style.width = "100%";
     canvas.style.height = "calc(100% - 30px)";
@@ -899,17 +1022,14 @@
       }
     }, 0);
   };
-  
+
   // -------------------------
   // 图表绘制函数：制作组统计
   // -------------------------
   const drawMakerChart = (filteredMakerCount, works) => {
     const container = createChartContainer("chartContainer2", "100px", "650px");
     const contentDiv = container.querySelector(".chart-content");
-    contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">
-      制作组统计 
-      <button id="toggleMakerChartBtn" class="btn" style="margin-left: 10px; font-size: 12px;">切换为${makerChartType === 'bar' ? '饼状图' : '柱状图'}</button>
-    </h3>`;
+    contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">制作组统计 <button id="toggleMakerChartBtn" class="btn" style="margin-left: 10px; font-size: 12px;">切换为${makerChartType === 'bar' ? '饼状图' : '柱状图'}</button></h3>`;
     const canvas = document.createElement("canvas");
     canvas.style.width = "100%";
     canvas.style.height = "calc(100% - 30px)";
@@ -962,7 +1082,7 @@
       }
     }, 0);
   };
-  
+
   const drawTimelineChart = (works) => {
     const groups = {};
     works.forEach(work => {
@@ -1014,7 +1134,7 @@
       options: options
     });
   };
-  
+
   const drawCumulativeChart = (works) => {
     const groups = {};
     works.forEach(work => {
@@ -1048,7 +1168,6 @@
           worksOnDate.forEach(work => {
             content += `作品名称: ${work.name}\n制作组: ${work.makerName}\n价格: ${work.price} 日元\n\n`;
           });
-          // 计算当天总购买金额（不含累计）
           const dayTotal = worksOnDate.reduce((sum, work) => sum + work.price, 0);
           customAlertWithExtraInfo(content, "当天总价：" + dayTotal + " 日元");
         }
@@ -1070,47 +1189,76 @@
       options: options
     });
   };
-  
+
   // -------------------------
-  // 新增：绘制组合柱状图（对比数据）
+  // 获取对比图表容器（统一显示，不重叠）
+  // -------------------------
+  const getComparisonContainer = () => {
+    let container = document.getElementById("comparisonChartsContainer");
+    if(!container) {
+      container = document.createElement("div");
+      container.id = "comparisonChartsContainer";
+      container.style.position = "fixed";
+      container.style.top = "50px";
+      container.style.left = "50px";
+      container.style.width = "600px";
+      container.style.maxHeight = "80%";
+      container.style.overflowY = "auto";
+      container.style.background = "#fff";
+      container.style.border = "2px solid #ccc";
+      container.style.borderRadius = "8px";
+      container.style.padding = "10px";
+      container.style.zIndex = "100010";
+      document.body.appendChild(container);
+    }
+    return container;
+  };
+
+  // -------------------------
+  // 绘制组合柱状图（对比图表）统一在对比图容器内生成
   // -------------------------
   const drawCombinedBarChart = (title, labels, data1, data2, label1, label2, yAxisLabel) => {
-    const container = createChartContainer("combinedChart" + title, "900px", "100px", "600px", "400px");
-    const contentDiv = container.querySelector(".chart-content");
-    contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">${title}</h3>`;
+    const container = getComparisonContainer();
+    const chartDiv = document.createElement("div");
+    chartDiv.style.marginBottom = "10px";
+    chartDiv.style.position = "relative";
+    chartDiv.style.border = "1px solid #ccc";
+    chartDiv.style.padding = "5px";
+    chartDiv.style.borderRadius = "4px";
     const canvas = document.createElement("canvas");
     canvas.style.width = "100%";
-    canvas.style.height = "calc(100% - 30px)";
-    contentDiv.appendChild(canvas);
+    canvas.style.height = "400px";
+    chartDiv.appendChild(canvas);
+    container.appendChild(chartDiv);
     const ctx = canvas.getContext("2d");
     new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: label1,
-          data: data1,
-          backgroundColor: "rgba(75, 192, 192, 0.6)",
-          borderColor: "rgba(75, 192, 192, 1)",
-          borderWidth: 1
-        },{
-          label: label2,
-          data: data2,
-          backgroundColor: "rgba(153, 102, 255, 0.6)",
-          borderColor: "rgba(153, 102, 255, 1)",
-          borderWidth: 1
-        }]
-      },
-      options: {
-        scales: {
-          y: { beginAtZero: true, title: { display: true, text: yAxisLabel } }
-        }
-      }
+         type: 'bar',
+         data: {
+             labels: labels,
+             datasets: [{
+                 label: label1,
+                 data: data1,
+                 backgroundColor: "rgba(75, 192, 192, 0.6)",
+                 borderColor: "rgba(75, 192, 192, 1)",
+                 borderWidth: 1
+             },{
+                 label: label2,
+                 data: data2,
+                 backgroundColor: "rgba(153, 102, 255, 0.6)",
+                 borderColor: "rgba(153, 102, 255, 1)",
+                 borderWidth: 1
+             }]
+         },
+         options: {
+            scales: {
+              y: { beginAtZero: true, title: { display: true, text: yAxisLabel } }
+            }
+         }
     });
   };
-  
+
   // -------------------------
-  // 新增：数据对比分析，包含多个方面
+  // 数据对比分析——多个方面
   // -------------------------
   const compareAllAspects = (result, periods, exchangeRate, aspects) => {
     let summary = "";
@@ -1209,23 +1357,23 @@
     }
     customAlert(summary);
   };
-  
+
   // -------------------------
   // 清理函数
   // -------------------------
   const cleanup = () => {
-    const ids = ["progressBar", "chartContainer1", "chartContainer2", "chartContainer3", "chartContainer4", "resultWindow", "comparisonChart"];
+    const ids = ["progressBar", "chartContainer1", "chartContainer2", "chartContainer3", "chartContainer4", "resultWindow", "comparisonChartsContainer", "hiddenChartsContainer"];
     ids.forEach(id => {
       const elem = document.getElementById(id);
       if (elem) { elem.remove(); }
     });
     genreChartObj = makerChartObj = timelineChartObj = cumulativeChartObj = null;
   };
-  
+
   const cleanupOverlays = () => {
     document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
   };
-  
+
   // -------------------------
   // 数据抓取及处理
   // -------------------------
@@ -1266,7 +1414,7 @@
     });
     if (detailPromises.length > 0) await Promise.all(detailPromises);
   };
-  
+
   const fetchAllPages = async (dlurl, detailMode, updateProgressCallback) => {
     const result = { count: 0, totalPrice: 0, works: [], genreCount: new Map(), makerCount: new Map(), eol: [] };
     const firstPageText = await fetchUrlAsync(dlurl + "1");
@@ -1292,7 +1440,7 @@
     await Promise.all(promises);
     return result;
   };
-  
+
   // -------------------------
   // 主逻辑
   // -------------------------
@@ -1469,7 +1617,6 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
       compBtn.style.left = "120px";
       compBtn.style.zIndex = "100001";
       compBtn.addEventListener("click", async () => {
-        // 将购买日期统一转换为 YYYY-MM-DD 格式
         const uniqueDates = [...new Set(result.works.map(work => new Date(work.date).toISOString().slice(0,10)))].sort();
         if(uniqueDates.length === 0) {
           await customAlert("没有可供选择的购买日期记录。");
@@ -1485,7 +1632,7 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
     addComparisonButton();
     cleanupOverlays();
   };
-  
+
   // -------------------------
   // Markdown预览及下载窗口
   // -------------------------
@@ -1525,13 +1672,13 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
     document.body.appendChild(overlay);
     animateModalIn(modal);
   };
-  
+
   // -------------------------
   // 全局命令
   // -------------------------
   window.clearLogs = () => { console.clear(); };
   window.reloadData = async () => { cleanup(); try { await main(); } catch(e) { console.error("reloadData encountered an error:", e); } };
-  
+
   // -------------------------
   // 程序入口：直接运行
   // -------------------------
