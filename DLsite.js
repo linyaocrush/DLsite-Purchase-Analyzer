@@ -1,14 +1,14 @@
 (function(){
   "use strict";
 
-  // 全局变量声明（参考原始代码）
+  // 全局变量声明
   let genreChartObj = null;
   let makerChartObj = null;
   let timelineChartObj = null;
   let cumulativeChartObj = null;
   let errorLogs = [];
 
-  // 新增：声明图表类型的全局变量，默认使用柱状图
+  // 声明图表类型全局变量（默认使用柱状图）
   let genreChartType = 'bar';
   let makerChartType = 'bar';
 
@@ -28,7 +28,7 @@
   };
 
   // -------------------------
-  // 自定义弹窗：带额外信息显示（例如右上角显示当天总价）
+  // 自定义弹窗：带额外信息显示
   // -------------------------
   const customAlertWithExtraInfo = (message, extraInfo) => {
     return new Promise(resolve => {
@@ -228,6 +228,24 @@
   let existingComparisonCharts = {};
 
   // -------------------------
+  // 进度条更新函数
+  // -------------------------
+  const updateProgressBar = (progress) => {
+    let progressBar = document.getElementById("progressBar");
+    if (!progressBar) {
+      progressBar = document.createElement("div");
+      progressBar.id = "progressBar";
+      progressBar.className = "progress-bar";
+      const innerBar = document.createElement("div");
+      innerBar.id = "innerProgressBar";
+      innerBar.className = "inner-progress";
+      progressBar.appendChild(innerBar);
+      document.body.appendChild(progressBar);
+    }
+    document.getElementById("innerProgressBar").style.width = progress + "%";
+  };
+
+  // -------------------------
   // 创建折叠面板
   // -------------------------
   const createCollapsibleSection = (titleText, contentHtml, collapsed = false) => {
@@ -259,232 +277,14 @@
   };
 
   // -------------------------
-  // 创建结果窗口（类似图表容器，可置顶、隐藏）
+  // 创建图表容器函数（增加 title 参数，用于隐藏后恢复按钮显示友好名称）
   // -------------------------
-  const createResultWindow = () => {
-    let container = document.getElementById("resultWindow");
-    if (!container) {
-      container = document.createElement("div");
-      container.id = "resultWindow";
-      container.className = "chart-container";
-      container.style.top = "200px";
-      container.style.left = "200px";
-      container.style.width = "1000px";
-      container.style.height = "800px";
-      container.style.minWidth = "300px";
-      container.style.minHeight = "200px";
-      container.style.resize = "both";
-      container.style.overflowY = "auto";
-      container.style.overflowX = "hidden";
-      container.style.zIndex = currentZIndex++;
-      document.body.appendChild(container);
-      
-      const dragButton = document.createElement("div");
-      dragButton.className = "drag-button";
-      dragButton.innerHTML = "≡";
-      container.appendChild(dragButton);
-      
-      const hideButton = document.createElement("button");
-      hideButton.textContent = "隐藏";
-      hideButton.className = "btn";
-      hideButton.style.position = "absolute";
-      hideButton.style.top = "5px";
-      hideButton.style.right = "60px";
-      hideButton.style.zIndex = "101";
-      hideButton.addEventListener("click", () => {
-         container.style.display = "none";
-         let hiddenContainer = document.getElementById("hiddenChartsContainer");
-         if (!hiddenContainer) {
-           hiddenContainer = document.createElement("div");
-           hiddenContainer.id = "hiddenChartsContainer";
-           hiddenContainer.style.position = "fixed";
-           hiddenContainer.style.right = "10px";
-           hiddenContainer.style.top = "10px";
-           hiddenContainer.style.zIndex = "110000";
-           document.body.appendChild(hiddenContainer);
-         }
-         const restoreButton = document.createElement("button");
-         restoreButton.textContent = "结果";
-         restoreButton.className = "btn";
-         restoreButton.style.display = "block";
-         restoreButton.style.marginBottom = "5px";
-         restoreButton.addEventListener("click", () => {
-             container.style.display = "block";
-             hiddenContainer.removeChild(restoreButton);
-         });
-         hiddenContainer.appendChild(restoreButton);
-      });
-      container.appendChild(hideButton);
-      
-      const saveButton = document.createElement("button");
-      saveButton.textContent = "保存";
-      saveButton.className = "btn";
-      saveButton.style.position = "absolute";
-      saveButton.style.top = "5px";
-      saveButton.style.right = "5px";
-      saveButton.style.zIndex = "101";
-      saveButton.addEventListener("click", () => {
-         const contentDiv = container.querySelector(".chart-content");
-         if(contentDiv){
-            const blob = new Blob([contentDiv.innerHTML], { type: "text/plain" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = "结果.txt";
-            a.click();
-         }
-      });
-      container.appendChild(saveButton);
-      
-      container.addEventListener("mousedown", () => {
-         container.style.zIndex = currentZIndex++;
-      });
-      
-      const contentDiv = document.createElement("div");
-      contentDiv.className = "chart-content";
-      container.appendChild(contentDiv);
-      
-      makeDraggable(container, dragButton);
-      return contentDiv;
-    }
-    return container.querySelector(".chart-content");
-  };
-
-  // -------------------------
-  // 将统计结果显示到结果窗口
-  // -------------------------
-  const displayResults = (result, exchangeRate, filteredGenreCount, filteredMakerCount) => {
-    const contentDiv = createResultWindow();
-    contentDiv.innerHTML = "";
-    const overviewHtml = `
-      <table>
-        <tr>
-          <th>统计项目</th>
-          <th>数量/金额</th>
-        </tr>
-        <tr>
-          <td>购买总数</td>
-          <td>${result.count} 部</td>
-        </tr>
-        <tr>
-          <td>总消费金额</td>
-          <td>${result.totalPrice} 日元 (${(result.totalPrice * exchangeRate).toFixed(2)} 人民币)</td>
-        </tr>
-      </table>
-    `;
-    contentDiv.appendChild(createCollapsibleSection("统计概览", overviewHtml, false));
-    const genreHtml = `
-      <table>
-        <tr>
-          <th>类型</th>
-          <th>作品数目</th>
-        </tr>
-        ${filteredGenreCount.map(([type, count]) => `
-          <tr>
-            <td>${type}</td>
-            <td>${count}</td>
-          </tr>
-        `).join('')}
-      </table>
-    `;
-    contentDiv.appendChild(createCollapsibleSection("各类型作品数排名", genreHtml, false));
-    const makerHtml = `
-      <table>
-        <tr>
-          <th>制作组</th>
-          <th>作品数目</th>
-        </tr>
-        ${filteredMakerCount.map(([maker, count]) => `
-          <tr>
-            <td>${maker}</td>
-            <td>${count}</td>
-          </tr>
-        `).join('')}
-      </table>
-    `;
-    contentDiv.appendChild(createCollapsibleSection("各制作组作品数排名", makerHtml, false));
-    const eolHtml = result.eol.length > 0 ? `
-      <table>
-        <tr>
-          <th>购买日期</th>
-          <th>制作组</th>
-          <th>作品名称</th>
-          <th>价格</th>
-        </tr>
-        ${result.eol.map(eol => `
-          <tr>
-            <td>${eol.date}</td>
-            <td>${eol.makerName}</td>
-            <td>${eol.name}</td>
-            <td>${eol.price} 日元</td>
-          </tr>
-        `).join('')}
-      </table>
-    ` : `<p>暂无已下架作品</p>`;
-    contentDiv.appendChild(createCollapsibleSection("已下架作品", eolHtml, false));
-    let timelineHtml = "";
-    const timelineGroups = {};
-    result.works.forEach(work => {
-      let day = new Date(work.date).toISOString().slice(0,10);
-      if(!timelineGroups[day]) timelineGroups[day] = [];
-      timelineGroups[day].push(work);
-    });
-    const sortedDates = Object.keys(timelineGroups).sort();
-    sortedDates.forEach(date => {
-      let tableHtml = `<table>
-         <tr>
-            <th>作品名称</th>
-            <th>制作组</th>
-            <th>价格</th>
-         </tr>`;
-      timelineGroups[date].forEach(work => {
-         tableHtml += `<tr>
-           <td>${work.name}</td>
-           <td>${work.makerName}</td>
-           <td>${work.price} 日元</td>
-         </tr>`;
-      });
-      tableHtml += `</table>`;
-      timelineHtml += `<div><strong>${date} (${timelineGroups[date].length} 项)</strong>${tableHtml}</div>`;
-    });
-    contentDiv.appendChild(createCollapsibleSection("时间轴视图", timelineHtml, true));
-    const authorHtml = `
-      <p>★ 本脚本由 凛遥crush 修改制作 ★</p>
-      <p>★ 项目地址：<a href="https://github.com/linyaocrush/DLsite-Purchase-Analyzer" target="_blank">https://github.com/linyaocrush/DLsite-Purchase-Analyzer</a></p>
-    `;
-    contentDiv.appendChild(createCollapsibleSection("作者信息", authorHtml, false));
-    if (errorLogs.length > 0) {
-      const errorHtml = `<pre>${errorLogs.join("\n")}</pre>`;
-      contentDiv.appendChild(createCollapsibleSection("错误日志", errorHtml, false));
-    }
-  };
-
-  // -------------------------
-  // 进度条更新
-  // -------------------------
-  const updateProgressBar = (progress) => {
-    let progressBar = document.getElementById("progressBar");
-    if (!progressBar) {
-      progressBar = document.createElement("div");
-      progressBar.id = "progressBar";
-      progressBar.className = "progress-bar";
-      const innerBar = document.createElement("div");
-      innerBar.id = "innerProgressBar";
-      innerBar.className = "inner-progress";
-      progressBar.appendChild(innerBar);
-      document.body.appendChild(progressBar);
-    }
-    document.getElementById("innerProgressBar").style.width = progress + "%";
-  };
-
-  // -------------------------
-  // 创建可拖拽图表容器
-  // -------------------------
-  const createChartContainer = (id, top, left, width = "500px", height = "400px") => {
+  const createChartContainer = (id, top, left, width = "500px", height = "400px", title = id) => {
     let container = document.getElementById(id);
     if (!container) {
       container = document.createElement("div");
       container.id = id;
+      container.dataset.title = title;
       container.className = "chart-container";
       container.style.top = top;
       container.style.left = left;
@@ -517,7 +317,7 @@
             const url = canvas.toDataURL("image/png");
             const a = document.createElement("a");
             a.href = url;
-            a.download = container.id + ".png";
+            a.download = container.dataset.title + ".png";
             a.click();
          }
       });
@@ -543,7 +343,7 @@
            document.body.appendChild(hiddenContainer);
          }
          const restoreButton = document.createElement("button");
-         restoreButton.textContent = id === "resultWindow" ? "结果" : id;
+         restoreButton.textContent = container.dataset.title || container.id;
          restoreButton.className = "btn";
          restoreButton.style.display = "block";
          restoreButton.style.marginBottom = "5px";
@@ -949,7 +749,7 @@
   // 图表绘制函数：作品类型统计
   // -------------------------
   const drawGenreChart = (filteredGenreCount, works) => {
-    const container = createChartContainer("chartContainer1", "100px", "100px");
+    const container = createChartContainer("chartContainer1", "100px", "100px", "500px", "400px", "作品类型统计");
     const contentDiv = container.querySelector(".chart-content");
     contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">作品类型统计 <button id="toggleGenreChartBtn" class="btn" style="margin-left: 10px; font-size: 12px;">切换为${genreChartType === 'bar' ? '饼状图' : '柱状图'}</button></h3>`;
     const canvas = document.createElement("canvas");
@@ -1009,7 +809,7 @@
   // 图表绘制函数：制作组统计
   // -------------------------
   const drawMakerChart = (filteredMakerCount, works) => {
-    const container = createChartContainer("chartContainer2", "100px", "650px");
+    const container = createChartContainer("chartContainer2", "100px", "650px", "500px", "400px", "制作组统计");
     const contentDiv = container.querySelector(".chart-content");
     contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">制作组统计 <button id="toggleMakerChartBtn" class="btn" style="margin-left: 10px; font-size: 12px;">切换为${makerChartType === 'bar' ? '饼状图' : '柱状图'}</button></h3>`;
     const canvas = document.createElement("canvas");
@@ -1073,7 +873,7 @@
     });
     const sortedDates = Object.keys(groups).sort();
     const counts = sortedDates.map(date => groups[date]);
-    const container = createChartContainer("chartContainer3", "550px", "100px");
+    const container = createChartContainer("chartContainer3", "550px", "100px", "500px", "400px", "每日购买数量");
     const contentDiv = container.querySelector(".chart-content");
     contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">每日购买数量</h3>`;
     const canvas = document.createElement("canvas");
@@ -1127,7 +927,7 @@
     let cumulative = [];
     let total = 0;
     sortedDates.forEach(date => { total += groups[date]; cumulative.push(total); });
-    const container = createChartContainer("chartContainer4", "550px", "650px");
+    const container = createChartContainer("chartContainer4", "550px", "650px", "500px", "400px", "累计消费金额");
     const contentDiv = container.querySelector(".chart-content");
     contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">累计消费金额（日元）</h3>`;
     const canvas = document.createElement("canvas");
@@ -1173,7 +973,7 @@
   };
 
   // -------------------------
-  // 新增：组合柱状图绘制函数
+  // 组合柱状图绘制函数
   // -------------------------
   const drawCombinedBarChart = (title, labels, data1, data2, datasetLabel1, datasetLabel2, yAxisLabel, uniqueKey) => {
     if(existingComparisonCharts[uniqueKey]) {
@@ -1185,7 +985,7 @@
     let containerId = "comparisonChart_" + (comparisonCounter++);
     let top = (150 + comparisonCounter * 20) + "px";
     let left = (150 + comparisonCounter * 20) + "px";
-    const container = createChartContainer(containerId, top, left, "600px", "400px");
+    const container = createChartContainer(containerId, top, left, "600px", "400px", title);
     const contentDiv = container.querySelector(".chart-content");
     contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">${title}</h3>`;
     const canvas = document.createElement("canvas");
@@ -1194,44 +994,44 @@
     contentDiv.appendChild(canvas);
     const ctx = canvas.getContext("2d");
     new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: datasetLabel1,
-          data: data1,
-          backgroundColor: "rgba(75, 192, 192, 0.6)",
-          borderColor: "rgba(75, 192, 192, 1)",
-          borderWidth: 1
-        },{
-          label: datasetLabel2,
-          data: data2,
-          backgroundColor: "rgba(153, 102, 255, 0.6)",
-          borderColor: "rgba(153, 102, 255, 1)",
-          borderWidth: 1
-        }]
-      },
-      options: {
-        scales: {
-          y: { beginAtZero: true, title: { display: true, text: yAxisLabel } }
-        },
-        onClick: (evt, elements) => {
-          if (elements.length > 0) {
-            const element = elements[0];
-            const datasetIndex = element.datasetIndex;
-            const index = element.index;
-            const clickedLabel = labels[index];
-            const clickedValue = datasetIndex === 0 ? data1[index] : data2[index];
-            const datasetName = datasetIndex === 0 ? datasetLabel1 : datasetLabel2;
-            customAlert("标签：" + clickedLabel + "\n" + datasetName + ": " + clickedValue);
-          }
-        }
-      }
+         type: 'bar',
+         data: {
+             labels: labels,
+             datasets: [{
+                 label: datasetLabel1,
+                 data: data1,
+                 backgroundColor: "rgba(75, 192, 192, 0.6)",
+                 borderColor: "rgba(75, 192, 192, 1)",
+                 borderWidth: 1
+             },{
+                 label: datasetLabel2,
+                 data: data2,
+                 backgroundColor: "rgba(153, 102, 255, 0.6)",
+                 borderColor: "rgba(153, 102, 255, 1)",
+                 borderWidth: 1
+             }]
+         },
+         options: {
+            scales: {
+              y: { beginAtZero: true, title: { display: true, text: yAxisLabel } }
+            },
+            onClick: (evt, elements) => {
+              if (elements.length > 0) {
+                 const element = elements[0];
+                 const datasetIndex = element.datasetIndex;
+                 const index = element.index;
+                 const clickedLabel = labels[index];
+                 const clickedValue = datasetIndex === 0 ? data1[index] : data2[index];
+                 const datasetName = datasetIndex === 0 ? datasetLabel1 : datasetLabel2;
+                 customAlert("标签：" + clickedLabel + "\n" + datasetName + ": " + clickedValue);
+              }
+            }
+         }
     });
   };
 
   // -------------------------
-  // 数据对比分析——多个方面
+  // 数据对比分析函数
   // -------------------------
   const compareAllAspects = (result, periods, exchangeRate, aspects) => {
     let summary = "";
@@ -1358,6 +1158,137 @@
   };
 
   // -------------------------
+  // displayResults 函数：将统计结果显示到结果窗口
+  // -------------------------
+  const displayResults = (result, exchangeRate, filteredGenreCount, filteredMakerCount) => {
+    // 这里创建结果窗口并展示统计信息
+    const container = document.getElementById("resultWindow") || document.createElement("div");
+    if (!container.id) {
+      container.id = "resultWindow";
+      container.className = "chart-container";
+      container.style.top = "200px";
+      container.style.left = "200px";
+      container.style.width = "1000px";
+      container.style.height = "800px";
+      container.style.minWidth = "300px";
+      container.style.minHeight = "200px";
+      container.style.resize = "both";
+      container.style.overflowY = "auto";
+      container.style.overflowX = "hidden";
+      container.style.zIndex = currentZIndex++;
+      document.body.appendChild(container);
+    }
+    const contentDiv = container.querySelector(".chart-content") || (function(){
+      const div = document.createElement("div");
+      div.className = "chart-content";
+      container.appendChild(div);
+      return div;
+    })();
+    contentDiv.innerHTML = "";
+    const overviewHtml = `
+      <table>
+        <tr>
+          <th>统计项目</th>
+          <th>数量/金额</th>
+        </tr>
+        <tr>
+          <td>购买总数</td>
+          <td>${result.count} 部</td>
+        </tr>
+        <tr>
+          <td>总消费金额</td>
+          <td>${result.totalPrice} 日元 (${(result.totalPrice * exchangeRate).toFixed(2)} 人民币)</td>
+        </tr>
+      </table>
+    `;
+    contentDiv.appendChild(createCollapsibleSection("统计概览", overviewHtml, false));
+    const genreHtml = `
+      <table>
+        <tr>
+          <th>类型</th>
+          <th>作品数目</th>
+        </tr>
+        ${filteredGenreCount.map(([type, count]) => `
+          <tr>
+            <td>${type}</td>
+            <td>${count}</td>
+          </tr>
+        `).join('')}
+      </table>
+    `;
+    contentDiv.appendChild(createCollapsibleSection("各类型作品数排名", genreHtml, false));
+    const makerHtml = `
+      <table>
+        <tr>
+          <th>制作组</th>
+          <th>作品数目</th>
+        </tr>
+        ${filteredMakerCount.map(([maker, count]) => `
+          <tr>
+            <td>${maker}</td>
+            <td>${count}</td>
+          </tr>
+        `).join('')}
+      </table>
+    `;
+    contentDiv.appendChild(createCollapsibleSection("各制作组作品数排名", makerHtml, false));
+    const eolHtml = result.eol.length > 0 ? `
+      <table>
+        <tr>
+          <th>购买日期</th>
+          <th>制作组</th>
+          <th>作品名称</th>
+          <th>价格</th>
+        </tr>
+        ${result.eol.map(eol => `
+          <tr>
+            <td>${eol.date}</td>
+            <td>${eol.makerName}</td>
+            <td>${eol.name}</td>
+            <td>${eol.price} 日元</td>
+          </tr>
+        `).join('')}
+      </table>
+    ` : `<p>暂无已下架作品</p>`;
+    contentDiv.appendChild(createCollapsibleSection("已下架作品", eolHtml, false));
+    let timelineHtml = "";
+    const timelineGroups = {};
+    result.works.forEach(work => {
+      let day = new Date(work.date).toISOString().slice(0,10);
+      if(!timelineGroups[day]) timelineGroups[day] = [];
+      timelineGroups[day].push(work);
+    });
+    const sortedDates = Object.keys(timelineGroups).sort();
+    sortedDates.forEach(date => {
+      let tableHtml = `<table>
+         <tr>
+            <th>作品名称</th>
+            <th>制作组</th>
+            <th>价格</th>
+         </tr>`;
+      timelineGroups[date].forEach(work => {
+         tableHtml += `<tr>
+           <td>${work.name}</td>
+           <td>${work.makerName}</td>
+           <td>${work.price} 日元</td>
+         </tr>`;
+      });
+      tableHtml += `</table>`;
+      timelineHtml += `<div><strong>${date} (${timelineGroups[date].length} 项)</strong>${tableHtml}</div>`;
+    });
+    contentDiv.appendChild(createCollapsibleSection("时间轴视图", timelineHtml, true));
+    const authorHtml = `
+      <p>★ 本脚本由 凛遥crush 修改制作 ★</p>
+      <p>★ 项目地址：<a href="https://github.com/linyaocrush/DLsite-Purchase-Analyzer" target="_blank">https://github.com/linyaocrush/DLsite-Purchase-Analyzer</a></p>
+    `;
+    contentDiv.appendChild(createCollapsibleSection("作者信息", authorHtml, false));
+    if (errorLogs.length > 0) {
+      const errorHtml = `<pre>${errorLogs.join("\n")}</pre>`;
+      contentDiv.appendChild(createCollapsibleSection("错误日志", errorHtml, false));
+    }
+  };
+
+  // -------------------------
   // 清理函数
   // -------------------------
   const cleanup = () => {
@@ -1375,7 +1306,7 @@
   };
 
   // -------------------------
-  // 数据抓取及处理
+  // 数据抓取及处理函数
   // -------------------------
   const processPage = async (doc, result, detailMode) => {
     const trElms = doc.querySelectorAll(".work_list_main tr:not(.item_name)");
@@ -1540,7 +1471,7 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
   };
 
   // -------------------------
-  // 主逻辑
+  // 主逻辑函数 main
   // -------------------------
   const main = async () => {
     cleanup();
