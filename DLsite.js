@@ -706,14 +706,29 @@
   };
 
   // -------------------------
-  // 文件导出相关函数
+  // 文件导出相关函数：导出 CSV 文件
   // -------------------------
   const exportCSV = (data, filename) => {
     const csvContent = data.map(row => row.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = filename; a.click();
+    a.href = url;
+    a.download = filename;
+    a.click();
+  };
+
+  // -------------------------
+  // 新增：Markdown 文件下载函数
+  // -------------------------
+  const showMarkdownPreviewAndDownload = (markdownContent, filename) => {
+      const blob = new Blob([markdownContent], { type: 'text/markdown;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   // -------------------------
@@ -1374,9 +1389,9 @@
   };
 
   // -------------------------
-  // 添加下载文件按钮
+  // 添加下载文件按钮（修改为接收 result 与 exchangeRate 参数）
   // -------------------------
-  const addDownloadButton = () => {
+  const addDownloadButton = (result, exchangeRate) => {
     const downloadBtn = document.createElement("button");
     downloadBtn.textContent = "下载文件";
     downloadBtn.className = "btn";
@@ -1552,7 +1567,7 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
     }
     displayResults(result, exchangeRate, filteredGenreCount, filteredMakerCount);
     
-    addDownloadButton();
+    addDownloadButton(result, exchangeRate);
     addCompareButton(result, exchangeRate);
   };
 
