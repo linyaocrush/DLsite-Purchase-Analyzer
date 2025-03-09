@@ -50,7 +50,7 @@
   };
 
   // -------------------------
-  // 样式注入
+  // 样式注入（主要修改：将 .modal-overlay 的 z-index 调整为 999999）
   // -------------------------
   const injectStyles = () => {
     const style = document.createElement('style');
@@ -64,7 +64,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        z-index: 100000;
+        z-index: 999999;  /* 修改后的 z-index */
         opacity: 0;
       }
       .modal-container {
@@ -204,19 +204,6 @@
         top: 10px;
         z-index: 110000;
       }
-      #comparisonChartsContainer {
-        position: fixed;
-        top: 50px;
-        left: 50px;
-        width: 600px;
-        max-height: 80%;
-        overflow-y: auto;
-        background: #fff;
-        border: 2px solid #ccc;
-        border-radius: 8px;
-        padding: 10px;
-        z-index: 100010;
-      }
     `;
     document.head.appendChild(style);
   };
@@ -225,6 +212,10 @@
   // 全局 z-index 计数器
   // -------------------------
   let currentZIndex = 100001;
+  // 用于生成独立对比分析窗口的编号
+  let comparisonCounter = 1;
+  // 用于记录已存在的数据对比分析（键由标题和两个时间段组成）
+  let existingComparisonCharts = {};
 
   // -------------------------
   // 全局变量和错误日志（只声明一次）
@@ -560,6 +551,7 @@
            document.body.appendChild(hiddenContainer);
          }
          const restoreButton = document.createElement("button");
+         // 隐藏结果窗口后恢复按钮显示文字为“结果”或窗口 id
          restoreButton.textContent = id === "resultWindow" ? "结果" : id;
          restoreButton.className = "btn";
          restoreButton.style.display = "block";
@@ -1191,58 +1183,40 @@
   };
 
   // -------------------------
-  // 获取对比图表容器（统一显示，不重叠）
+  // 新的绘制组合柱状图函数——每个数据对比分析图表独立窗口
   // -------------------------
-  const getComparisonContainer = () => {
-    let container = document.getElementById("comparisonChartsContainer");
-    if(!container) {
-      container = document.createElement("div");
-      container.id = "comparisonChartsContainer";
-      container.style.position = "fixed";
-      container.style.top = "50px";
-      container.style.left = "50px";
-      container.style.width = "600px";
-      container.style.maxHeight = "80%";
-      container.style.overflowY = "auto";
-      container.style.background = "#fff";
-      container.style.border = "2px solid #ccc";
-      container.style.borderRadius = "8px";
-      container.style.padding = "10px";
-      container.style.zIndex = "100010";
-      document.body.appendChild(container);
+  const drawCombinedBarChart = (title, labels, data1, data2, datasetLabel1, datasetLabel2, yAxisLabel, uniqueKey) => {
+    // 只有当标题与两个时间段完全相同时才认为重复
+    if(existingComparisonCharts[uniqueKey]) {
+      customAlert("该分析已存在。");
+      return;
     }
-    return container;
-  };
-
-  // -------------------------
-  // 绘制组合柱状图（对比图表）统一在对比图容器内生成
-  // -------------------------
-  const drawCombinedBarChart = (title, labels, data1, data2, label1, label2, yAxisLabel) => {
-    const container = getComparisonContainer();
-    const chartDiv = document.createElement("div");
-    chartDiv.style.marginBottom = "10px";
-    chartDiv.style.position = "relative";
-    chartDiv.style.border = "1px solid #ccc";
-    chartDiv.style.padding = "5px";
-    chartDiv.style.borderRadius = "4px";
+    existingComparisonCharts[uniqueKey] = true;
+    
+    // 生成独立窗口 id，窗口位置稍作偏移
+    let containerId = "comparisonChart_" + (comparisonCounter++);
+    let top = (150 + comparisonCounter * 20) + "px";
+    let left = (150 + comparisonCounter * 20) + "px";
+    const container = createChartContainer(containerId, top, left, "600px", "400px");
+    const contentDiv = container.querySelector(".chart-content");
+    contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">${title}</h3>`;
     const canvas = document.createElement("canvas");
     canvas.style.width = "100%";
-    canvas.style.height = "400px";
-    chartDiv.appendChild(canvas);
-    container.appendChild(chartDiv);
+    canvas.style.height = "calc(100% - 30px)";
+    contentDiv.appendChild(canvas);
     const ctx = canvas.getContext("2d");
     new Chart(ctx, {
          type: 'bar',
          data: {
              labels: labels,
              datasets: [{
-                 label: label1,
+                 label: datasetLabel1,
                  data: data1,
                  backgroundColor: "rgba(75, 192, 192, 0.6)",
                  borderColor: "rgba(75, 192, 192, 1)",
                  borderWidth: 1
              },{
-                 label: label2,
+                 label: datasetLabel2,
                  data: data2,
                  backgroundColor: "rgba(153, 102, 255, 0.6)",
                  borderColor: "rgba(153, 102, 255, 1)",
@@ -1252,6 +1226,17 @@
          options: {
             scales: {
               y: { beginAtZero: true, title: { display: true, text: yAxisLabel } }
+            },
+            onClick: (evt, elements) => {
+              if (elements.length > 0) {
+                 const element = elements[0];
+                 const datasetIndex = element.datasetIndex;
+                 const index = element.index;
+                 const clickedLabel = labels[index];
+                 const clickedValue = datasetIndex === 0 ? data1[index] : data2[index];
+                 const datasetName = datasetIndex === 0 ? datasetLabel1 : datasetLabel2;
+                 customAlert("标签：" + clickedLabel + "\n" + datasetName + ": " + clickedValue);
+              }
             }
          }
     });
@@ -1279,7 +1264,13 @@
       const allGenres = Array.from(new Set([...Object.keys(genreCounts1), ...Object.keys(genreCounts2)]));
       const data1 = allGenres.map(g => genreCounts1[g] || 0);
       const data2 = allGenres.map(g => genreCounts2[g] || 0);
-      drawCombinedBarChart("不同类型作品偏好对比", allGenres, data1, data2, "时间段1", "时间段2", "数量");
+      let keyPrefType = "不同类型作品偏好对比_" +
+         periods.period1.start.toISOString().slice(0,10) + "_" + periods.period1.end.toISOString().slice(0,10) + "_" +
+         periods.period2.start.toISOString().slice(0,10) + "_" + periods.period2.end.toISOString().slice(0,10);
+      drawCombinedBarChart("不同类型作品偏好对比", allGenres, data1, data2, 
+         `${periods.period1.start.toISOString().slice(0,10)} ~ ${periods.period1.end.toISOString().slice(0,10)}`,
+         `${periods.period2.start.toISOString().slice(0,10)} ~ ${periods.period2.end.toISOString().slice(0,10)}`,
+         "数量", keyPrefType);
     }
     // ② 用户偏好对比 - 不同制作组
     if (aspects.prefMaker) {
@@ -1298,7 +1289,13 @@
       const allMakers = Array.from(new Set([...Object.keys(makerCounts1), ...Object.keys(makerCounts2)]));
       const mData1 = allMakers.map(m => makerCounts1[m] || 0);
       const mData2 = allMakers.map(m => makerCounts2[m] || 0);
-      drawCombinedBarChart("不同制作组偏好对比", allMakers, mData1, mData2, "时间段1", "时间段2", "数量");
+      let keyPrefMaker = "不同制作组偏好对比_" +
+         periods.period1.start.toISOString().slice(0,10) + "_" + periods.period1.end.toISOString().slice(0,10) + "_" +
+         periods.period2.start.toISOString().slice(0,10) + "_" + periods.period2.end.toISOString().slice(0,10);
+      drawCombinedBarChart("不同制作组偏好对比", allMakers, mData1, mData2, 
+         `${periods.period1.start.toISOString().slice(0,10)} ~ ${periods.period1.end.toISOString().slice(0,10)}`,
+         `${periods.period2.start.toISOString().slice(0,10)} ~ ${periods.period2.end.toISOString().slice(0,10)}`,
+         "数量", keyPrefMaker);
     }
     // ③ 制作组对比 - 整体制作组（购买数量和消费金额）
     if (aspects.makerOverall) {
@@ -1321,10 +1318,22 @@
       const allMakers = Array.from(new Set([...Object.keys(makerData1), ...Object.keys(makerData2)]));
       const countData1 = allMakers.map(m => makerData1[m] ? makerData1[m].count : 0);
       const countData2 = allMakers.map(m => makerData2[m] ? makerData2[m].count : 0);
-      drawCombinedBarChart("不同制作组对比 - 购买数量", allMakers, countData1, countData2, "时间段1", "时间段2", "数量");
+      let keyMakerOverallCount = "不同制作组对比_购买数量_" +
+         periods.period1.start.toISOString().slice(0,10) + "_" + periods.period1.end.toISOString().slice(0,10) + "_" +
+         periods.period2.start.toISOString().slice(0,10) + "_" + periods.period2.end.toISOString().slice(0,10);
+      drawCombinedBarChart("不同制作组对比 - 购买数量", allMakers, countData1, countData2, 
+         `${periods.period1.start.toISOString().slice(0,10)} ~ ${periods.period1.end.toISOString().slice(0,10)}`,
+         `${periods.period2.start.toISOString().slice(0,10)} ~ ${periods.period2.end.toISOString().slice(0,10)}`,
+         "数量", keyMakerOverallCount);
       const totalData1 = allMakers.map(m => makerData1[m] ? makerData1[m].total : 0);
       const totalData2 = allMakers.map(m => makerData2[m] ? makerData2[m].total : 0);
-      drawCombinedBarChart("不同制作组对比 - 消费金额 (日元)", allMakers, totalData1, totalData2, "时间段1", "时间段2", "金额");
+      let keyMakerOverallTotal = "不同制作组对比_消费金额_" +
+         periods.period1.start.toISOString().slice(0,10) + "_" + periods.period1.end.toISOString().slice(0,10) + "_" +
+         periods.period2.start.toISOString().slice(0,10) + "_" + periods.period2.end.toISOString().slice(0,10);
+      drawCombinedBarChart("不同制作组对比 - 消费金额 (日元)", allMakers, totalData1, totalData2, 
+         `${periods.period1.start.toISOString().slice(0,10)} ~ ${periods.period1.end.toISOString().slice(0,10)}`,
+         `${periods.period2.start.toISOString().slice(0,10)} ~ ${periods.period2.end.toISOString().slice(0,10)}`,
+         "金额", keyMakerOverallTotal);
     }
     // ④ 制作组作品类型对比
     if (aspects.makerType) {
@@ -1351,7 +1360,13 @@
              const allGenres = Array.from(new Set([...Object.keys(genreData1), ...Object.keys(genreData2)]));
              const gData1 = allGenres.map(g => genreData1[g] || 0);
              const gData2 = allGenres.map(g => genreData2[g] || 0);
-             drawCombinedBarChart(`制作组【${selectedMaker}】作品类型对比`, allGenres, gData1, gData2, "时间段1", "时间段2", "数量");
+             let keyMakerType = `制作组作品类型对比_${selectedMaker}_` +
+                periods.period1.start.toISOString().slice(0,10) + "_" + periods.period1.end.toISOString().slice(0,10) + "_" +
+                periods.period2.start.toISOString().slice(0,10) + "_" + periods.period2.end.toISOString().slice(0,10);
+             drawCombinedBarChart(`制作组【${selectedMaker}】作品类型对比`, allGenres, gData1, gData2, 
+                `${periods.period1.start.toISOString().slice(0,10)} ~ ${periods.period1.end.toISOString().slice(0,10)}`,
+                `${periods.period2.start.toISOString().slice(0,10)} ~ ${periods.period2.end.toISOString().slice(0,10)}`,
+                "数量", keyMakerType);
          });
       }
     }
@@ -1368,6 +1383,7 @@
       if (elem) { elem.remove(); }
     });
     genreChartObj = makerChartObj = timelineChartObj = cumulativeChartObj = null;
+    existingComparisonCharts = {}; // 清空数据对比分析记录
   };
 
   const cleanupOverlays = () => {
@@ -1670,28 +1686,8 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
     modal.appendChild(btnContainer);
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
-    animateModalIn(modal);
   };
 
-  // -------------------------
-  // 全局命令
-  // -------------------------
-  window.clearLogs = () => { console.clear(); };
-  window.reloadData = async () => { cleanup(); try { await main(); } catch(e) { console.error("reloadData encountered an error:", e); } };
-
-  // -------------------------
-  // 程序入口：直接运行
-  // -------------------------
   injectStyles();
-  (async () => {
-    if (!window.location.hostname.includes("dlsite.com")) {
-      const jump = await customChoice("当前网页不是DLsite页面，是否自动跳转到DLsite购买页面？", [
-        { label: "跳转", value: "y" },
-        { label: "取消", value: "n" }
-      ]);
-      if (jump === "y") { window.location.href = "https://www.dlsite.com/maniax/mypage/userbuy"; return; }
-    }
-    await main();
-  })();
-  
+  main();
 })();
