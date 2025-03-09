@@ -1159,31 +1159,11 @@
 
   // -------------------------
   // displayResults 函数：将统计结果显示到结果窗口
+  // 修改为使用 createChartContainer 创建结果窗口，确保可拖拽、缩放、置顶
   // -------------------------
   const displayResults = (result, exchangeRate, filteredGenreCount, filteredMakerCount) => {
-    // 这里创建结果窗口并展示统计信息
-    const container = document.getElementById("resultWindow") || document.createElement("div");
-    if (!container.id) {
-      container.id = "resultWindow";
-      container.className = "chart-container";
-      container.style.top = "200px";
-      container.style.left = "200px";
-      container.style.width = "1000px";
-      container.style.height = "800px";
-      container.style.minWidth = "300px";
-      container.style.minHeight = "200px";
-      container.style.resize = "both";
-      container.style.overflowY = "auto";
-      container.style.overflowX = "hidden";
-      container.style.zIndex = currentZIndex++;
-      document.body.appendChild(container);
-    }
-    const contentDiv = container.querySelector(".chart-content") || (function(){
-      const div = document.createElement("div");
-      div.className = "chart-content";
-      container.appendChild(div);
-      return div;
-    })();
+    const container = createChartContainer("resultWindow", "200px", "200px", "1000px", "800px", "查询结果");
+    const contentDiv = container.querySelector(".chart-content");
     contentDiv.innerHTML = "";
     const overviewHtml = `
       <table>
