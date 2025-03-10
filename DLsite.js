@@ -8,19 +8,19 @@
   let cumulativeChartObj = null;
   let errorLogs = [];
 
-  // 声明图表类型全局变量（默认使用柱状图）
+  // 图表类型（默认柱状图）
   let genreChartType = 'bar';
   let makerChartType = 'bar';
 
   // -------------------------
-  // 辅助函数：将日期截断为年月日（忽略时分秒）
+  // 辅助函数：截断日期（仅保留年月日）
   // -------------------------
   const truncateDate = (date) => {
     return new Date(date.getFullYear(), date.getMonth(), date.getDate());
   };
 
   // -------------------------
-  // 日志输出函数
+  // 日志输出函数（带样式）
   // -------------------------
   const styledLog = (message, style = "", type = "log") => {
     const logFns = { log: console.log, warn: console.warn, error: console.error, info: console.info };
@@ -60,159 +60,217 @@
   };
 
   // -------------------------
-  // 样式注入
+  // 样式注入 —— 全面美化页面
   // -------------------------
   const injectStyles = () => {
     const style = document.createElement('style');
+    style.id = "DLsiteStyle";
     style.textContent = `
+      /* 整体页面背景及字体 */
+      body { 
+         font-family: 'Open Sans', sans-serif; 
+         background: linear-gradient(135deg, #f8f9fa, #e9ecef); 
+         color: #343a40; 
+         margin: 0; 
+         padding: 0;
+      }
+      /* 模态框遮罩和容器动画，置顶 */
       .modal-overlay {
-        position: fixed;
-        top: 0; left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 999999;
-        opacity: 0;
+         position: fixed;
+         top: 0;
+         left: 0;
+         width: 100%;
+         height: 100%;
+         background: rgba(0, 0, 0, 0.5);
+         backdrop-filter: blur(6px);
+         display: flex;
+         align-items: center;
+         justify-content: center;
+         z-index: 1000000;
+         opacity: 0;
+         animation: fadeIn 0.5s forwards;
       }
       .modal-container {
-        background: #fff;
-        padding: 20px;
-        border-radius: 8px;
-        max-width: 500px;
-        text-align: center;
-        transform: scale(0.8);
-        opacity: 0;
-        position: relative;
+         background: #ffffff;
+         padding: 20px 30px;
+         border-radius: 12px;
+         max-width: 600px;
+         text-align: center;
+         position: relative;
+         box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+         animation: slideIn 0.5s forwards;
       }
+      @keyframes fadeIn {
+         from { opacity: 0; }
+         to { opacity: 1; }
+      }
+      @keyframes slideIn {
+         from { transform: translateY(-20px); }
+         to { transform: translateY(0); }
+      }
+      /* 进度条样式 */
       .progress-bar {
-        position: fixed;
-        bottom: 10px;
-        left: 10px;
-        width: 300px;
-        height: 20px;
-        background: #ddd;
-        border-radius: 10px;
-        overflow: hidden;
-        z-index: 10000;
+         position: fixed;
+         bottom: 20px;
+         left: 20px;
+         width: 320px;
+         height: 24px;
+         background: #ddd;
+         border-radius: 12px;
+         overflow: hidden;
+         z-index: 10000;
+         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
       }
       .inner-progress {
-        height: 100%;
-        width: 0%;
-        background: linear-gradient(to right, #4caf50, #81c784);
-        transition: width 0.2s;
+         height: 100%;
+         width: 0%;
+         background: linear-gradient(90deg, #6a11cb, #2575fc);
+         transition: width 0.5s ease;
       }
+      /* 图表容器样式 */
       .chart-container {
-        background: #fff;
-        border: 2px solid #ccc;
-        border-radius: 8px;
-        overflow: hidden;
-        z-index: 10000;
-        position: absolute;
+         background: #fff;
+         border: 1px solid #ccc;
+         border-radius: 12px;
+         overflow: hidden;
+         z-index: 10000;
+         position: absolute;
+         box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+         transition: transform 0.3s ease;
       }
+      .chart-container:hover {
+         transform: scale(1.02);
+      }
+      /* 拖拽按钮样式 */
       .drag-button {
-        position: absolute;
-        top: 5px;
-        left: 5px;
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        background: #007BFF;
-        border: 2px solid white;
-        cursor: grab;
-        user-select: none;
-        z-index: 100;
-        text-align: center;
-        line-height: 24px;
-        color: white;
-        font-size: 16px;
+         position: absolute;
+         top: 10px;
+         left: 10px;
+         width: 30px;
+         height: 30px;
+         border-radius: 50%;
+         background: #ff5722;
+         border: 2px solid #fff;
+         cursor: grab;
+         user-select: none;
+         z-index: 101;
+         text-align: center;
+         line-height: 30px;
+         color: #fff;
+         font-size: 16px;
+         transition: background 0.3s;
       }
+      .drag-button:hover {
+         background: #e64a19;
+      }
+      /* 图表内容区域 */
       .chart-content {
-        width: 100%;
-        height: calc(100% - 30px);
-        margin-top: 30px;
-        overflow: auto;
+         width: 100%;
+         height: calc(100% - 40px);
+         margin-top: 40px;
+         overflow: auto;
+         padding: 10px;
+         background: rgba(250,250,250,0.8);
       }
+      /* 按钮美化 */
       .btn {
-        margin: 5px;
-        padding: 5px 10px;
-        cursor: pointer;
-        border: none;
-        background: #4caf50;
-        color: #fff;
-        border-radius: 4px;
-        transition: background 0.2s;
+         margin: 8px;
+         padding: 10px 18px;
+         cursor: pointer;
+         border: none;
+         background: linear-gradient(135deg, #42a5f5, #1e88e5);
+         color: #fff;
+         border-radius: 6px;
+         transition: background 0.3s, transform 0.2s;
+         font-size: 14px;
       }
       .btn:hover {
-        background: #45a049;
+         background: linear-gradient(135deg, #1e88e5, #42a5f5);
+         transform: scale(1.05);
       }
+      /* 高级模态框样式 */
       .md-modal {
-        background: #fff;
-        padding: 20px;
-        border-radius: 8px;
-        width: 80%;
-        max-width: 600px;
-        max-height: 80%;
-        overflow: auto;
-        box-shadow: 0 0 10px rgba(0,0,0,0.5);
-        transform: scale(0.8);
-        opacity: 0;
-        position: relative;
+         background: #fff;
+         padding: 30px;
+         border-radius: 12px;
+         width: 80%;
+         max-width: 600px;
+         max-height: 80%;
+         overflow: auto;
+         box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+         position: relative;
+         animation: modalBounceIn 0.6s forwards;
+      }
+      @keyframes modalBounceIn {
+         0% { transform: scale(0.7); opacity: 0; }
+         60% { transform: scale(1.05); opacity: 1; }
+         80% { transform: scale(0.95); }
+         100% { transform: scale(1); }
       }
       .md-modal h2 {
-        margin-top: 0;
-        text-align: center;
-        background: linear-gradient(to right, #ff6347, #ff1493, #8a2be2, #32cd32);
-        color: #fff;
-        padding: 10px;
-        border-radius: 4px;
+         margin-top: 0;
+         text-align: center;
+         background: linear-gradient(90deg, #ff8a65, #ff7043);
+         color: #fff;
+         padding: 12px;
+         border-radius: 6px;
+         letter-spacing: 1px;
       }
       .md-modal pre {
-        white-space: pre-wrap;
-        word-break: break-all;
-        background: #f5f5f5;
-        border: 1px solid #ddd;
-        padding: 10px;
-        max-height: 300px;
-        overflow-y: auto;
-        margin: 20px 0;
-        border-radius: 4px;
+         white-space: pre-wrap;
+         word-break: break-all;
+         background: #f1f1f1;
+         border: 1px solid #ccc;
+         padding: 12px;
+         max-height: 300px;
+         overflow-y: auto;
+         margin: 20px 0;
+         border-radius: 6px;
       }
+      /* 表格样式 */
       table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 10px;
+         width: 100%;
+         border-collapse: collapse;
+         margin-bottom: 10px;
       }
       th, td {
-        border: 1px solid #ddd;
-        padding: 8px;
-        text-align: center;
+         border: 1px solid #ccc;
+         padding: 10px;
+         text-align: center;
       }
       th {
-        background: #f2f2f2;
+         background: #f0f0f0;
       }
+      /* 折叠面板样式 */
       .collapsible-section {
-        border: 1px solid #ccc;
-        margin-bottom: 10px;
-        border-radius: 4px;
+         border: 1px solid #bbb;
+         margin-bottom: 10px;
+         border-radius: 6px;
+         overflow: hidden;
+         background: #fafafa;
       }
       .collapsible-header {
-        margin: 0;
-        padding: 5px 10px;
-        background: #f2f2f2;
-        cursor: pointer;
-        user-select: none;
+         margin: 0;
+         padding: 10px 15px;
+         background: #e0e0e0;
+         cursor: pointer;
+         user-select: none;
+         font-weight: bold;
+         transition: background 0.3s;
+      }
+      .collapsible-header:hover {
+         background: #d5d5d5;
       }
       .collapsible-content {
-        padding: 10px;
+         padding: 15px;
+         background: #fff;
       }
+      /* 隐藏图表容器 */
       #hiddenChartsContainer {
-        position: fixed;
-        right: 10px;
-        top: 10px;
-        z-index: 110000;
+         position: fixed;
+         right: 20px;
+         top: 20px;
+         z-index: 11000;
       }
     `;
     document.head.appendChild(style);
@@ -221,7 +279,7 @@
   injectStyles();
 
   // -------------------------
-  // 全局 z-index 计数器和对比窗口计数器
+  // 全局 z-index 和对比窗口计数
   // -------------------------
   let currentZIndex = 100001;
   let comparisonCounter = 1;
@@ -277,7 +335,7 @@
   };
 
   // -------------------------
-  // 创建图表容器函数（增加 title 参数，用于隐藏后恢复按钮显示友好名称）
+  // 创建图表容器（含拖拽、保存、隐藏等功能）
   // -------------------------
   const createChartContainer = (id, top, left, width = "500px", height = "400px", title = id) => {
     let container = document.getElementById(id);
@@ -398,32 +456,32 @@
   };
 
   // -------------------------
-  // 动画函数
+  // 动画函数（使用内置 CSS3 动画，兼容 gsap）
   // -------------------------
   const fadeIn = (element) => {
     if (typeof gsap !== "undefined") {
-      gsap.fromTo(element, { opacity: 0 }, { opacity: 1, duration: 0.2, ease: "power2.out" });
+      gsap.fromTo(element, { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.out" });
     } else {
       element.style.opacity = 0;
-      element.style.transition = "opacity 0.2s ease-out";
+      element.style.transition = "opacity 0.5s ease-in-out";
       setTimeout(() => { element.style.opacity = 1; }, 10);
     }
   };
   const fadeOut = (element, callback) => {
     if (typeof gsap !== "undefined") {
-      gsap.to(element, { opacity: 0, duration: 0.2, ease: "power2.in", onComplete: callback });
+      gsap.to(element, { opacity: 0, duration: 0.5, ease: "power2.in", onComplete: callback });
     } else {
       element.style.opacity = 0;
-      setTimeout(callback, 200);
+      setTimeout(callback, 500);
     }
   };
   const animateModalIn = (element) => {
     if (typeof gsap !== "undefined") {
-      gsap.fromTo(element, { scale: 0.8, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.2, ease: "back.out(1.7)" });
+      gsap.fromTo(element, { scale: 0.8, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.7)" });
     } else {
       element.style.transform = "scale(0.8)";
       element.style.opacity = "0";
-      element.style.transition = "transform 0.2s ease-out, opacity 0.2s ease-out";
+      element.style.transition = "transform 0.5s ease-out, opacity 0.5s ease-out";
       setTimeout(() => {
         element.style.transform = "scale(1)";
         element.style.opacity = "1";
@@ -432,15 +490,15 @@
   };
   const animateModalOut = (element, callback) => {
     if (typeof gsap !== "undefined") {
-      gsap.to(element, { scale: 0.8, opacity: 0, duration: 0.2, ease: "back.in(1.7)", onComplete: callback });
+      gsap.to(element, { scale: 0.8, opacity: 0, duration: 0.5, ease: "back.in(1.7)", onComplete: callback });
     } else {
       element.style.transform = "scale(1)";
       element.style.opacity = "1";
-      element.style.transition = "transform 0.2s ease-in, opacity 0.2s ease-in";
+      element.style.transition = "transform 0.5s ease-in, opacity 0.5s ease-in";
       setTimeout(() => {
         element.style.transform = "scale(0.8)";
         element.style.opacity = "0";
-        setTimeout(callback, 200);
+        setTimeout(callback, 500);
       }, 10);
     }
   };
@@ -451,7 +509,7 @@
   const closeModal = (overlay, modal, callback) => {
     animateModalOut(modal, () => {
       fadeOut(overlay, () => {
-        document.body.removeChild(overlay);
+        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
         if(callback) callback();
       });
     });
@@ -560,7 +618,7 @@
   };
 
   // -------------------------
-  // 下拉菜单选择时间段及对比方面（精确到天）
+  // 下拉菜单：选择时间段及对比方面（精确到天）
   // -------------------------
   const customSelectPeriods = (availableDates) => {
     return new Promise(resolve => {
@@ -706,7 +764,7 @@
   };
 
   // -------------------------
-  // 文件导出相关函数：导出 CSV 文件
+  // 文件导出函数：导出 CSV 文件
   // -------------------------
   const exportCSV = (data, filename) => {
     const csvContent = data.map(row => row.join(",")).join("\n");
@@ -719,7 +777,7 @@
   };
 
   // -------------------------
-  // 新增：Markdown 文件下载函数
+  // Markdown 文件下载函数
   // -------------------------
   const showMarkdownPreviewAndDownload = (markdownContent, filename) => {
       const blob = new Blob([markdownContent], { type: 'text/markdown;charset=utf-8;' });
@@ -732,7 +790,7 @@
   };
 
   // -------------------------
-  // Chart.js 加载
+  // Chart.js 加载函数
   // -------------------------
   const loadChartJs = async () => {
     if (typeof Chart === "undefined") {
@@ -747,7 +805,7 @@
   };
 
   // -------------------------
-  // fetchUrlAsync
+  // fetchUrlAsync —— 异步获取页面内容
   // -------------------------
   const fetchUrlAsync = async (url) => {
     try {
@@ -801,7 +859,7 @@
         labels: filteredGenreCount.map(item => item[0]),
         datasets: [{
           label: "作品数目",
-          data: filteredGenreCount.map(item => item[1]),
+          data: filteredGenreCount.map(item => item[1].count),
           backgroundColor: backgroundColors,
           borderColor: borderColors,
           borderWidth: 1
@@ -861,7 +919,7 @@
         labels: filteredMakerCount.map(item => item[0]),
         datasets: [{
           label: "作品数目",
-          data: filteredMakerCount.map(item => item[1]),
+          data: filteredMakerCount.map(item => item[1].count),
           backgroundColor: backgroundColors,
           borderColor: borderColors,
           borderWidth: 1
@@ -988,7 +1046,7 @@
   };
 
   // -------------------------
-  // 组合柱状图绘制函数
+  // 组合柱状图绘制函数（用于数据对比分析）
   // -------------------------
   const drawCombinedBarChart = (title, labels, data1, data2, datasetLabel1, datasetLabel2, yAxisLabel, uniqueKey) => {
     if(existingComparisonCharts[uniqueKey]) {
@@ -1173,8 +1231,7 @@
   };
 
   // -------------------------
-  // displayResults 函数：将统计结果显示到结果窗口
-  // 修改为使用 createChartContainer 创建结果窗口，确保可拖拽、缩放、置顶
+  // 显示统计结果：使用可拖拽窗口展示
   // -------------------------
   const displayResults = (result, exchangeRate, filteredGenreCount, filteredMakerCount) => {
     const container = createChartContainer("resultWindow", "200px", "200px", "1000px", "800px", "查询结果");
@@ -1197,31 +1254,33 @@
       </table>
     `;
     contentDiv.appendChild(createCollapsibleSection("统计概览", overviewHtml, false));
+    // 作品类型统计：直接使用从页面获取的链接（若有）
     const genreHtml = `
       <table>
         <tr>
           <th>类型</th>
           <th>作品数目</th>
         </tr>
-        ${filteredGenreCount.map(([type, count]) => `
+        ${filteredGenreCount.map(([type, entry]) => `
           <tr>
-            <td>${type}</td>
-            <td>${count}</td>
+            <td>${type} ${entry.link ? `<a href="${entry.link}" target="_blank" style="margin-left: 5px; font-size: 12px;">跳转</a>` : ''}</td>
+            <td>${entry.count}</td>
           </tr>
         `).join('')}
       </table>
     `;
     contentDiv.appendChild(createCollapsibleSection("各类型作品数排名", genreHtml, false));
+    // 制作组统计：直接使用从页面获取的链接（若有）
     const makerHtml = `
       <table>
         <tr>
           <th>制作组</th>
           <th>作品数目</th>
         </tr>
-        ${filteredMakerCount.map(([maker, count]) => `
+        ${filteredMakerCount.map(([maker, entry]) => `
           <tr>
-            <td>${maker}</td>
-            <td>${count}</td>
+            <td>${maker} ${entry.link ? `<a href="${entry.link}" target="_blank" style="margin-left: 5px; font-size: 12px;">跳转</a>` : ''}</td>
+            <td>${entry.count}</td>
           </tr>
         `).join('')}
       </table>
@@ -1284,24 +1343,38 @@
   };
 
   // -------------------------
-  // 清理函数
+  // 清理函数：移除所有脚本产生的 DOM 元素
   // -------------------------
   const cleanup = () => {
-    const ids = ["progressBar", "chartContainer1", "chartContainer2", "chartContainer3", "chartContainer4", "resultWindow", "comparisonChartsContainer", "hiddenChartsContainer"];
+    const ids = [
+      "progressBar", "chartContainer1", "chartContainer2", "chartContainer3",
+      "chartContainer4", "resultWindow", "comparisonChartsContainer",
+      "hiddenChartsContainer", "downloadBtn", "compareBtn", "resetBtn"
+    ];
     ids.forEach(id => {
       const elem = document.getElementById(id);
-      if (elem) { elem.remove(); }
+      if (elem && elem.parentNode) { 
+        try {
+          elem.parentNode.removeChild(elem);
+        } catch(e) {
+          console.warn(e);
+        }
+      }
     });
     genreChartObj = makerChartObj = timelineChartObj = cumulativeChartObj = null;
     existingComparisonCharts = {};
   };
 
   const cleanupOverlays = () => {
-    document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
+    document.querySelectorAll('.modal-overlay').forEach(el => {
+      if(el.parentNode) {
+        try { el.parentNode.removeChild(el); } catch(e){ console.warn(e); }
+      }
+    });
   };
 
   // -------------------------
-  // 数据抓取及处理函数
+  // 数据抓取及处理函数：获取作品详情同时提取标签和制作组的链接
   // -------------------------
   const processPage = async (doc, result, detailMode) => {
     const trElms = doc.querySelectorAll(".work_list_main tr:not(.item_name)");
@@ -1312,9 +1385,16 @@
       work.date = elm.querySelector(".buy_date").innerText;
       work.name = elm.querySelector(".work_name").innerText.trim();
       work.genre = elm.querySelector(".work_genre span").textContent.trim();
+      // 尝试直接获取作品标签链接
+      let genreAnchor = elm.querySelector(".work_genre a");
+      work.genreLink = genreAnchor ? genreAnchor.href : "";
       const priceText = elm.querySelector(".work_price").textContent.split(' /')[0];
       work.price = parseInt(priceText.replace(/\D/g, ''));
       work.makerName = elm.querySelector(".maker_name").innerText.trim();
+      // 尝试直接获取制作组链接
+      let makerAnchor = elm.querySelector(".maker_name a");
+      work.makerLink = makerAnchor ? makerAnchor.href : "";
+      
       if (detailMode && work.url !== "") {
         detailPromises.push((async (w) => {
           try {
@@ -1325,18 +1405,40 @@
             docWork.querySelectorAll(".main_genre a").forEach(a => {
               const g = a.textContent.trim();
               w.mainGenre.push(g);
-              result.genreCount.set(g, (result.genreCount.get(g) || 0) + 1);
+              let entry = result.genreCount.get(g);
+              if (!entry) {
+                entry = { count: 0, link: a.href };
+                result.genreCount.set(g, entry);
+              }
+              entry.count++;
             });
           } catch(e) {
             errorLogs.push(`Error fetching detail for ${w.url}: ${e}`);
           }
         })(work));
       }
-      result.makerCount.set(work.makerName, (result.makerCount.get(work.makerName) || 0) + 1);
+      // 制作组统计更新：存储链接
+      let makerEntry = result.makerCount.get(work.makerName);
+      if (!makerEntry) {
+         makerEntry = { count: 0, link: work.makerLink };
+         result.makerCount.set(work.makerName, makerEntry);
+      }
+      makerEntry.count++;
+      if (!makerEntry.link && work.makerLink) {
+         makerEntry.link = work.makerLink;
+      }
       result.count++;
       if (work.price > 0) result.totalPrice += work.price;
       result.works.push(work);
       if (!work.url) result.eol.push(work);
+      // 同时统计作品标签（若未通过详情页统计过）
+      if (!result.genreCount.has(work.genre)) {
+        result.genreCount.set(work.genre, { count: 1, link: work.genreLink });
+      } else {
+        let gEntry = result.genreCount.get(work.genre);
+        gEntry.count++;
+        if (!gEntry.link && work.genreLink) gEntry.link = work.genreLink;
+      }
     });
     if (detailPromises.length > 0) await Promise.all(detailPromises);
   };
@@ -1372,6 +1474,7 @@
   // -------------------------
   const addCompareButton = (result, exchangeRate) => {
     const compareBtn = document.createElement("button");
+    compareBtn.id = "compareBtn";
     compareBtn.textContent = "数据对比分析";
     compareBtn.className = "btn";
     compareBtn.style.position = "fixed";
@@ -1389,10 +1492,11 @@
   };
 
   // -------------------------
-  // 添加下载文件按钮（修改为接收 result 与 exchangeRate 参数）
+  // 添加下载文件按钮（支持 MD 与 CSV）
   // -------------------------
   const addDownloadButton = (result, exchangeRate) => {
     const downloadBtn = document.createElement("button");
+    downloadBtn.id = "downloadBtn";
     downloadBtn.textContent = "下载文件";
     downloadBtn.className = "btn";
     downloadBtn.style.position = "fixed";
@@ -1425,7 +1529,7 @@
 
 | 类型 | 作品数目 |
 | ---- | -------- |
-${[...result.genreCount.entries()].map(([type, count]) => `| ${type} | ${count} |`).join("\n")}
+${[...result.genreCount.entries()].map(([type, entry]) => `| ${type} ${entry.link ? `<a href="${entry.link}" target="_blank">跳转</a>` : ""} | ${entry.count} |`).join("\n")}
 
 ---
 
@@ -1433,7 +1537,7 @@ ${[...result.genreCount.entries()].map(([type, count]) => `| ${type} | ${count} 
 
 | 制作组 | 作品数目 |
 | ------ | -------- |
-${[...result.makerCount.entries()].map(([maker, count]) => `| ${maker} | ${count} |`).join("\n")}
+${[...result.makerCount.entries()].map(([maker, entry]) => `| ${maker} ${entry.link ? `<a href="${entry.link}" target="_blank">跳转</a>` : ""} | ${entry.count} |`).join("\n")}
 
 ---
 
@@ -1466,7 +1570,7 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
   };
 
   // -------------------------
-  // 主逻辑函数 main
+  // 主逻辑函数：页面抓取、数据处理及结果展示
   // -------------------------
   const main = async () => {
     cleanup();
@@ -1547,10 +1651,10 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
     } else {
       styledLog("ℹ️ 未输入数值，使用默认值 0（不过滤）", "color: #666666; font-weight: bold;", "info");
     }
-    result.genreCount = [...result.genreCount.entries()].sort((a, b) => b[1] - a[1]);
-    result.makerCount = [...result.makerCount.entries()].sort((a, b) => b[1] - a[1]);
-    const filteredGenreCount = excludeThreshold === 0 ? result.genreCount : result.genreCount.filter(([, count]) => count >= excludeThreshold);
-    const filteredMakerCount = excludeThreshold === 0 ? result.makerCount : result.makerCount.filter(([, count]) => count >= excludeThreshold);
+    result.genreCount = [...result.genreCount.entries()].sort((a, b) => b[1].count - a[1].count);
+    result.makerCount = [...result.makerCount.entries()].sort((a, b) => b[1].count - a[1].count);
+    const filteredGenreCount = excludeThreshold === 0 ? result.genreCount : result.genreCount.filter(([, entry]) => entry.count >= excludeThreshold);
+    const filteredMakerCount = excludeThreshold === 0 ? result.makerCount : result.makerCount.filter(([, entry]) => entry.count >= excludeThreshold);
     
     const showChart = await customChoice("是否显示图表数据展示？", [
       { label: "显示", value: "y" },
@@ -1569,6 +1673,36 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
     
     addDownloadButton(result, exchangeRate);
     addCompareButton(result, exchangeRate);
+    
+    // 添加重置按钮（位于页面右下角）
+    addResetButton();
+
+    // 最后清除控制台所有信息
+    console.clear();
+  };
+
+  // -------------------------
+  // 添加重置按钮：位于页面右下角，红色背景
+  // -------------------------
+  const addResetButton = () => {
+    const resetBtn = document.createElement("button");
+    resetBtn.id = "resetBtn";
+    resetBtn.textContent = "重置";
+    resetBtn.className = "btn";
+    resetBtn.style.position = "fixed";
+    resetBtn.style.bottom = "10px";
+    resetBtn.style.right = "10px";
+    resetBtn.style.background = "red";
+    resetBtn.style.color = "white";
+    resetBtn.style.zIndex = "100002";
+    resetBtn.addEventListener("click", () => {
+      cleanup();
+      const injectedStyle = document.getElementById("DLsiteStyle");
+      if (injectedStyle && injectedStyle.parentNode) {
+         injectedStyle.parentNode.removeChild(injectedStyle);
+      }
+    });
+    document.body.appendChild(resetBtn);
   };
 
   // -------------------------
