@@ -1601,18 +1601,18 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
     let dlurl = "https://www.dlsite.com/maniax/mypage/userbuy/=/type/all/start/all/sort/1/order/1/page/";
     if (detailMode) {
       const typeOptionsArr = [
-        { label: "0: 全部作品", value: "0" },
-        { label: "12: 同人：所有", value: "12" },
-        { label: "2: 同人：全年龄", value: "2" },
-        { label: "1: 同人：男性向", value: "1" },
-        { label: "3: 同人：女性向", value: "3" },
-        { label: "13: 商业游戏：所有", value: "13" },
-        { label: "9: 商业游戏：全年龄", value: "9" },
-        { label: "4: 商业游戏：男性向", value: "4" },
-        { label: "14: 漫画：所有", value: "14" },
-        { label: "10: 漫画：全年龄", value: "10" },
-        { label: "7: 漫画：男性向", value: "7" },
-        { label: "11: 漫画：女性向", value: "11" }
+        { label: "全部作品", value: "0" },
+        { label: "同人：所有", value: "12" },
+        { label: "同人：全年龄", value: "2" },
+        { label: "同人：男性向", value: "1" },
+        { label: "同人：女性向", value: "3" },
+        { label: "商业游戏：所有", value: "13" },
+        { label: "商业游戏：全年龄", value: "9" },
+        { label: "商业游戏：男性向", value: "4" },
+        { label: "漫画：所有", value: "14" },
+        { label: "漫画：全年龄", value: "10" },
+        { label: "漫画：男性向", value: "7" },
+        { label: "漫画：女性向", value: "11" }
       ];
       const typeChoice = await customChoice("请选择作品类型：", typeOptionsArr);
       if (typeChoice === "0") dlurl = dlurl.replace(/type\/[^/]+/, "type/all");
