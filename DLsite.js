@@ -670,16 +670,20 @@
     });
   };
   const exportCSV = (data, filename) => {
-    const csvContent = data.map(row => row.join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const BOM = "\uFEFF";
+  const csvContent = BOM + data.map(row => 
+    row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(",")
+  ).join("\n");
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = filename;
     a.click();
   };
-  const showMarkdownPreviewAndDownload = (markdownContent, filename) => {
-      const blob = new Blob([markdownContent], { type: 'text/markdown;charset=utf-8;' });
+ const showMarkdownPreviewAndDownload = (markdownContent, filename) => {
+  const BOM = "\uFEFF";
+  const blob = new Blob([BOM + markdownContent], { type: 'text/markdown;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -1402,11 +1406,24 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
           ["总消费金额", `${result.totalPrice} 日元 (${(result.totalPrice * exchangeRate).toFixed(2)} 人民币)`]
         ], "DLsite购买历史查询.csv");
       } else if (fileFormat === "2") {
-        exportCSV([
-          ["统计项目", "数量/金额"],
-          ["购买总数", result.count],
-          ["总消费金额", `${result.totalPrice} 日元 (${(result.totalPrice * exchangeRate).toFixed(2)} 人民币)`]
-        ], "DLsite购买历史查询.csv");
+       const csvData = [
+  ["统计项目", "数量/金额"],
+  ["购买总数", result.count],
+  ["总消费金额", `${result.totalPrice} 日元 (${(result.totalPrice * exchangeRate).toFixed(2)} 人民币)`],
+  [],
+  ["类型统计"],
+  ["类型", "作品数目"],
+  ...result.genreCount.map(([type, entry]) => [type, entry.count]),
+  [],
+  ["制作组统计"],
+  ["制作组", "作品数目"],
+  ...result.makerCount.map(([maker, entry]) => [maker, entry.count]),
+  [],
+  ["已下架作品"],
+  ["购买日期", "制作组", "作品名称", "价格"],
+  ...result.eol.map(eol => [eol.date, eol.makerName, eol.name, eol.price])
+];
+exportCSV(csvData, "DLsite购买历史查询.csv");
       }
     });
     document.body.appendChild(downloadBtn);
