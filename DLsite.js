@@ -1,35 +1,19 @@
 (function(){
   "use strict";
-
-  // 全局变量声明
   let genreChartObj = null;
   let makerChartObj = null;
   let timelineChartObj = null;
   let cumulativeChartObj = null;
   let errorLogs = [];
-
-  // 图表类型（默认柱状图）
   let genreChartType = 'bar';
   let makerChartType = 'bar';
-
-  // -------------------------
-  // 辅助函数：截断日期（仅保留年月日）
-  // -------------------------
   const truncateDate = (date) => {
     return new Date(date.getFullYear(), date.getMonth(), date.getDate());
   };
-
-  // -------------------------
-  // 日志输出函数（带样式）
-  // -------------------------
   const styledLog = (message, style = "", type = "log") => {
     const logFns = { log: console.log, warn: console.warn, error: console.error, info: console.info };
     logFns[type](`%c${message}`, style);
   };
-
-  // -------------------------
-  // 自定义弹窗：带额外信息显示
-  // -------------------------
   const customAlertWithExtraInfo = (message, extraInfo) => {
     return new Promise(resolve => {
       const { overlay, modal } = createModal("600px");
@@ -43,14 +27,12 @@
       extraDiv.style.borderRadius = "4px";
       extraDiv.textContent = extraInfo;
       modal.appendChild(extraDiv);
-      
       const msgDiv = document.createElement("pre");
       msgDiv.style.textAlign = "left";
       msgDiv.style.maxHeight = "400px";
       msgDiv.style.overflowY = "auto";
       msgDiv.textContent = message;
       modal.appendChild(msgDiv);
-      
       const btn = document.createElement("button");
       btn.textContent = "确定";
       btn.className = "btn";
@@ -58,15 +40,10 @@
       modal.appendChild(btn);
     });
   };
-
-  // -------------------------
-  // 样式注入 —— 全面美化页面
-  // -------------------------
   const injectStyles = () => {
     const style = document.createElement('style');
     style.id = "DLsiteStyle";
     style.textContent = `
-      /* 整体页面背景及字体 */
       body { 
          font-family: 'Open Sans', sans-serif; 
          background: linear-gradient(135deg, #f8f9fa, #e9ecef); 
@@ -74,7 +51,6 @@
          margin: 0; 
          padding: 0;
       }
-      /* 模态框遮罩和容器动画，置顶 */
       .modal-overlay {
          position: fixed;
          top: 0;
@@ -108,7 +84,6 @@
          from { transform: translateY(-20px); }
          to { transform: translateY(0); }
       }
-      /* 进度条样式 */
       .progress-bar {
          position: fixed;
          bottom: 20px;
@@ -127,7 +102,6 @@
          background: linear-gradient(90deg, #6a11cb, #2575fc);
          transition: width 0.5s ease;
       }
-      /* 图表容器样式 */
       .chart-container {
          background: #fff;
          border: 1px solid #ccc;
@@ -141,7 +115,6 @@
       .chart-container:hover {
          transform: scale(1.02);
       }
-      /* 拖拽按钮样式 */
       .drag-button {
          position: absolute;
          top: 10px;
@@ -163,7 +136,6 @@
       .drag-button:hover {
          background: #e64a19;
       }
-      /* 图表内容区域 */
       .chart-content {
          width: 100%;
          height: calc(100% - 40px);
@@ -172,7 +144,6 @@
          padding: 10px;
          background: rgba(250,250,250,0.8);
       }
-      /* 按钮美化 */
       .btn {
          margin: 8px;
          padding: 10px 18px;
@@ -188,7 +159,6 @@
          background: linear-gradient(135deg, #1e88e5, #42a5f5);
          transform: scale(1.05);
       }
-      /* 高级模态框样式 */
       .md-modal {
          background: #fff;
          padding: 30px;
@@ -227,7 +197,6 @@
          margin: 20px 0;
          border-radius: 6px;
       }
-      /* 表格样式 */
       table {
          width: 100%;
          border-collapse: collapse;
@@ -241,7 +210,6 @@
       th {
          background: #f0f0f0;
       }
-      /* 折叠面板样式 */
       .collapsible-section {
          border: 1px solid #bbb;
          margin-bottom: 10px;
@@ -265,7 +233,6 @@
          padding: 15px;
          background: #fff;
       }
-      /* 隐藏图表容器 */
       #hiddenChartsContainer {
          position: fixed;
          right: 20px;
@@ -275,19 +242,10 @@
     `;
     document.head.appendChild(style);
   };
-
   injectStyles();
-
-  // -------------------------
-  // 全局 z-index 和对比窗口计数
-  // -------------------------
   let currentZIndex = 100001;
   let comparisonCounter = 1;
   let existingComparisonCharts = {};
-
-  // -------------------------
-  // 进度条更新函数
-  // -------------------------
   const updateProgressBar = (progress) => {
     let progressBar = document.getElementById("progressBar");
     if (!progressBar) {
@@ -302,10 +260,6 @@
     }
     document.getElementById("innerProgressBar").style.width = progress + "%";
   };
-
-  // -------------------------
-  // 创建折叠面板
-  // -------------------------
   const createCollapsibleSection = (titleText, contentHtml, collapsed = false) => {
     const section = document.createElement("div");
     section.className = "collapsible-section";
@@ -333,10 +287,6 @@
     section.appendChild(content);
     return section;
   };
-
-  // -------------------------
-  // 创建图表容器（含拖拽、保存、隐藏等功能）
-  // -------------------------
   const createChartContainer = (id, top, left, width = "500px", height = "400px", title = id) => {
     let container = document.getElementById(id);
     if (!container) {
@@ -356,12 +306,10 @@
       container.style.border = "1px solid #ccc";
       container.style.zIndex = currentZIndex++;
       document.body.appendChild(container);
-      
       const dragButton = document.createElement("div");
       dragButton.className = "drag-button";
       dragButton.innerHTML = "≡";
       container.appendChild(dragButton);
-      
       const saveButton = document.createElement("button");
       saveButton.textContent = "保存";
       saveButton.className = "btn";
@@ -380,7 +328,6 @@
          }
       });
       container.appendChild(saveButton);
-      
       const hideButton = document.createElement("button");
       hideButton.textContent = "隐藏";
       hideButton.className = "btn";
@@ -412,24 +359,17 @@
          hiddenContainer.appendChild(restoreButton);
       });
       container.appendChild(hideButton);
-      
       container.addEventListener("mousedown", () => {
          container.style.zIndex = currentZIndex++;
       });
-      
       const contentDiv = document.createElement("div");
       contentDiv.className = "chart-content";
       container.appendChild(contentDiv);
-      
       makeDraggable(container, dragButton);
       return container;
     }
     return container;
   };
-
-  // -------------------------
-  // 让窗口可拖拽
-  // -------------------------
   const makeDraggable = (element, handle) => {
     let offsetX, offsetY;
     let isDragging = false;
@@ -454,10 +394,6 @@
       handle.style.cursor = "grab";
     });
   };
-
-  // -------------------------
-  // 动画函数（使用内置 CSS3 动画，兼容 gsap）
-  // -------------------------
   const fadeIn = (element) => {
     if (typeof gsap !== "undefined") {
       gsap.fromTo(element, { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.out" });
@@ -502,10 +438,6 @@
       }, 10);
     }
   };
-
-  // -------------------------
-  // 统一关闭模态窗口
-  // -------------------------
   const closeModal = (overlay, modal, callback) => {
     animateModalOut(modal, () => {
       fadeOut(overlay, () => {
@@ -514,10 +446,6 @@
       });
     });
   };
-
-  // -------------------------
-  // 统一创建模态窗口
-  // -------------------------
   const createModal = (maxWidth) => {
     const overlay = document.createElement("div");
     overlay.className = "modal-overlay";
@@ -530,7 +458,6 @@
     animateModalIn(modal);
     return { overlay, modal };
   };
-
   const customChoice = (message, options) => {
     return new Promise(resolve => {
       const { overlay, modal } = createModal("500px");
@@ -548,7 +475,6 @@
       modal.appendChild(btnContainer);
     });
   };
-
   const customAlert = (message) => {
     return new Promise(resolve => {
       const { overlay, modal } = createModal("600px");
@@ -565,7 +491,6 @@
       modal.appendChild(btn);
     });
   };
-
   const customPrompt = (message, defaultValue = "") => {
     return new Promise(resolve => {
       const { overlay, modal } = createModal("400px");
@@ -594,7 +519,6 @@
       modal.appendChild(btnContainer);
     });
   };
-
   const customConfirm = (message) => {
     return new Promise(resolve => {
       const { overlay, modal } = createModal("400px");
@@ -616,24 +540,17 @@
       modal.appendChild(btnContainer);
     });
   };
-
-  // -------------------------
-  // 下拉菜单：选择时间段及对比方面（精确到天）
-  // -------------------------
   const customSelectPeriods = (availableDates) => {
     return new Promise(resolve => {
       const { overlay, modal } = createModal("500px");
       const title = document.createElement("h2");
       title.textContent = "选择时间段及对比方面";
       modal.appendChild(title);
-      
-      // 时间段1
       const period1Container = document.createElement("div");
       period1Container.style.margin = "10px 0";
       const period1Label = document.createElement("div");
       period1Label.textContent = "时间段 1:";
       period1Container.appendChild(period1Label);
-      
       const period1StartLabel = document.createElement("label");
       period1StartLabel.textContent = "开始日期: ";
       const period1StartSelect = document.createElement("select");
@@ -645,7 +562,6 @@
       });
       period1Container.appendChild(period1StartLabel);
       period1Container.appendChild(period1StartSelect);
-      
       const period1EndLabel = document.createElement("label");
       period1EndLabel.textContent = " 结束日期: ";
       const period1EndSelect = document.createElement("select");
@@ -658,14 +574,11 @@
       period1Container.appendChild(period1EndLabel);
       period1Container.appendChild(period1EndSelect);
       modal.appendChild(period1Container);
-      
-      // 时间段2
       const period2Container = document.createElement("div");
       period2Container.style.margin = "10px 0";
       const period2Label = document.createElement("div");
       period2Label.textContent = "时间段 2:";
       period2Container.appendChild(period2Label);
-      
       const period2StartLabel = document.createElement("label");
       period2StartLabel.textContent = "开始日期: ";
       const period2StartSelect = document.createElement("select");
@@ -677,7 +590,6 @@
       });
       period2Container.appendChild(period2StartLabel);
       period2Container.appendChild(period2StartSelect);
-      
       const period2EndLabel = document.createElement("label");
       period2EndLabel.textContent = " 结束日期: ";
       const period2EndSelect = document.createElement("select");
@@ -690,8 +602,6 @@
       period2Container.appendChild(period2EndLabel);
       period2Container.appendChild(period2EndSelect);
       modal.appendChild(period2Container);
-      
-      // 对比方面复选框区域
       const aspectsContainer = document.createElement("div");
       aspectsContainer.style.margin = "10px 0";
       const aspectsTitle = document.createElement("div");
@@ -718,8 +628,6 @@
         aspectsContainer.appendChild(document.createElement("br"));
       });
       modal.appendChild(aspectsContainer);
-      
-      // 按钮区域
       const btnContainer = document.createElement("div");
       btnContainer.style.marginTop = "15px";
       const okBtn = document.createElement("button");
@@ -731,7 +639,6 @@
       btnContainer.appendChild(okBtn);
       btnContainer.appendChild(cancelBtn);
       modal.appendChild(btnContainer);
-      
       okBtn.addEventListener("click", () => {
         const p1Start = period1StartSelect.value;
         const p1End = period1EndSelect.value;
@@ -762,10 +669,6 @@
       cancelBtn.addEventListener("click", () => { closeModal(overlay, modal, () => { resolve(null); }); });
     });
   };
-
-  // -------------------------
-  // 文件导出函数：导出 CSV 文件
-  // -------------------------
   const exportCSV = (data, filename) => {
     const csvContent = data.map(row => row.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -775,10 +678,6 @@
     a.download = filename;
     a.click();
   };
-
-  // -------------------------
-  // Markdown 文件下载函数
-  // -------------------------
   const showMarkdownPreviewAndDownload = (markdownContent, filename) => {
       const blob = new Blob([markdownContent], { type: 'text/markdown;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
@@ -788,10 +687,6 @@
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
-
-  // -------------------------
-  // Chart.js 加载函数
-  // -------------------------
   const loadChartJs = async () => {
     if (typeof Chart === "undefined") {
       return new Promise((resolve, reject) => {
@@ -803,10 +698,6 @@
       });
     }
   };
-
-  // -------------------------
-  // fetchUrlAsync —— 异步获取页面内容
-  // -------------------------
   const fetchUrlAsync = async (url) => {
     try {
       const response = await fetch(url);
@@ -817,10 +708,6 @@
       return "";
     }
   };
-
-  // -------------------------
-  // 图表绘制函数：作品类型统计
-  // -------------------------
   const drawGenreChart = (filteredGenreCount, works) => {
     const container = createChartContainer("chartContainer1", "100px", "100px", "500px", "400px", "作品类型统计");
     const contentDiv = container.querySelector(".chart-content");
@@ -877,10 +764,6 @@
       }
     }, 0);
   };
-
-  // -------------------------
-  // 图表绘制函数：制作组统计
-  // -------------------------
   const drawMakerChart = (filteredMakerCount, works) => {
     const container = createChartContainer("chartContainer2", "100px", "650px", "500px", "400px", "制作组统计");
     const contentDiv = container.querySelector(".chart-content");
@@ -937,7 +820,6 @@
       }
     }, 0);
   };
-
   const drawTimelineChart = (works) => {
     const groups = {};
     works.forEach(work => {
@@ -989,7 +871,6 @@
       options: options
     });
   };
-
   const drawCumulativeChart = (works) => {
     const groups = {};
     works.forEach(work => {
@@ -1044,17 +925,12 @@
       options: options
     });
   };
-
-  // -------------------------
-  // 组合柱状图绘制函数（用于数据对比分析）
-  // -------------------------
   const drawCombinedBarChart = (title, labels, data1, data2, datasetLabel1, datasetLabel2, yAxisLabel, uniqueKey) => {
     if(existingComparisonCharts[uniqueKey]) {
       customAlert("该分析已存在。");
       return;
     }
     existingComparisonCharts[uniqueKey] = true;
-    
     let containerId = "comparisonChart_" + (comparisonCounter++);
     let top = (150 + comparisonCounter * 20) + "px";
     let left = (150 + comparisonCounter * 20) + "px";
@@ -1102,10 +978,6 @@
          }
     });
   };
-
-  // -------------------------
-  // 数据对比分析函数
-  // -------------------------
   const compareAllAspects = (result, periods, exchangeRate, aspects) => {
     let summary = "";
     if (aspects.prefType) {
@@ -1229,10 +1101,6 @@
     }
     customAlert(summary);
   };
-
-  // -------------------------
-  // 显示统计结果：使用可拖拽窗口展示
-  // -------------------------
   const displayResults = (result, exchangeRate, filteredGenreCount, filteredMakerCount) => {
     const container = createChartContainer("resultWindow", "200px", "200px", "1000px", "800px", "查询结果");
     const contentDiv = container.querySelector(".chart-content");
@@ -1254,7 +1122,6 @@
       </table>
     `;
     contentDiv.appendChild(createCollapsibleSection("统计概览", overviewHtml, false));
-    // 作品类型统计：直接使用从页面获取的链接（若有）
     const genreHtml = `
       <table>
         <tr>
@@ -1270,7 +1137,6 @@
       </table>
     `;
     contentDiv.appendChild(createCollapsibleSection("各类型作品数排名", genreHtml, false));
-    // 制作组统计：直接使用从页面获取的链接（若有）
     const makerHtml = `
       <table>
         <tr>
@@ -1341,10 +1207,6 @@
       contentDiv.appendChild(createCollapsibleSection("错误日志", errorHtml, false));
     }
   };
-
-  // -------------------------
-  // 清理函数：移除所有脚本产生的 DOM 元素
-  // -------------------------
   const cleanup = () => {
     const ids = [
       "progressBar", "chartContainer1", "chartContainer2", "chartContainer3",
@@ -1364,7 +1226,6 @@
     genreChartObj = makerChartObj = timelineChartObj = cumulativeChartObj = null;
     existingComparisonCharts = {};
   };
-
   const cleanupOverlays = () => {
     document.querySelectorAll('.modal-overlay').forEach(el => {
       if(el.parentNode) {
@@ -1372,10 +1233,6 @@
       }
     });
   };
-
-  // -------------------------
-  // 数据抓取及处理函数：获取作品详情同时提取标签和制作组的链接
-  // -------------------------
   const processPage = async (doc, result, detailMode) => {
     const trElms = doc.querySelectorAll(".work_list_main tr:not(.item_name)");
     const detailPromises = [];
@@ -1385,16 +1242,13 @@
       work.date = elm.querySelector(".buy_date").innerText;
       work.name = elm.querySelector(".work_name").innerText.trim();
       work.genre = elm.querySelector(".work_genre span").textContent.trim();
-      // 尝试直接获取作品标签链接
       let genreAnchor = elm.querySelector(".work_genre a");
       work.genreLink = genreAnchor ? genreAnchor.href : "";
       const priceText = elm.querySelector(".work_price").textContent.split(' /')[0];
       work.price = parseInt(priceText.replace(/\D/g, ''));
       work.makerName = elm.querySelector(".maker_name").innerText.trim();
-      // 尝试直接获取制作组链接
       let makerAnchor = elm.querySelector(".maker_name a");
       work.makerLink = makerAnchor ? makerAnchor.href : "";
-      
       if (detailMode && work.url !== "") {
         detailPromises.push((async (w) => {
           try {
@@ -1417,7 +1271,6 @@
           }
         })(work));
       }
-      // 制作组统计更新：存储链接
       let makerEntry = result.makerCount.get(work.makerName);
       if (!makerEntry) {
          makerEntry = { count: 0, link: work.makerLink };
@@ -1431,7 +1284,6 @@
       if (work.price > 0) result.totalPrice += work.price;
       result.works.push(work);
       if (!work.url) result.eol.push(work);
-      // 同时统计作品标签（若未通过详情页统计过）
       if (!result.genreCount.has(work.genre)) {
         result.genreCount.set(work.genre, { count: 1, link: work.genreLink });
       } else {
@@ -1442,7 +1294,6 @@
     });
     if (detailPromises.length > 0) await Promise.all(detailPromises);
   };
-
   const fetchAllPages = async (dlurl, detailMode, updateProgressCallback) => {
     const result = { count: 0, totalPrice: 0, works: [], genreCount: new Map(), makerCount: new Map(), eol: [] };
     const firstPageText = await fetchUrlAsync(dlurl + "1");
@@ -1468,10 +1319,6 @@
     await Promise.all(promises);
     return result;
   };
-
-  // -------------------------
-  // 添加数据对比分析按钮
-  // -------------------------
   const addCompareButton = (result, exchangeRate) => {
     const compareBtn = document.createElement("button");
     compareBtn.id = "compareBtn";
@@ -1490,10 +1337,6 @@
     });
     document.body.appendChild(compareBtn);
   };
-
-  // -------------------------
-  // 添加下载文件按钮（支持 MD 与 CSV）
-  // -------------------------
   const addDownloadButton = (result, exchangeRate) => {
     const downloadBtn = document.createElement("button");
     downloadBtn.id = "downloadBtn";
@@ -1568,18 +1411,12 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
     });
     document.body.appendChild(downloadBtn);
   };
-
-  // -------------------------
-  // 主逻辑函数：页面抓取、数据处理及结果展示
-  // -------------------------
   const main = async () => {
     cleanup();
-
     const isValidDLsitePage = () => {
       return /dlsite\.com\/maniax\/mypage\/userbuy/.test(window.location.href) &&
              document.querySelector(".work_list_main") !== null;
     };
-
     if (!isValidDLsitePage()) {
       const jump = await customConfirm("当前页面未检测到 DLsite 购买记录，是否跳转到正确的购买历史页面？");
       if (jump) {
@@ -1590,7 +1427,6 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
         return;
       }
     }
-
     styledLog("✦ DLsite购买历史统计 ✦", "font-size: 28px; font-weight: bold; color: white; background: linear-gradient(to right, #ff6347, #ff1493, #8a2be2, #32cd32); padding: 10px; border-radius: 8px;");
     let detailMode = true;
     const quickView = await customChoice("是否开启快速查看消费金额？（仅统计金额）", [
@@ -1655,7 +1491,6 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
     result.makerCount = [...result.makerCount.entries()].sort((a, b) => b[1].count - a[1].count);
     const filteredGenreCount = excludeThreshold === 0 ? result.genreCount : result.genreCount.filter(([, entry]) => entry.count >= excludeThreshold);
     const filteredMakerCount = excludeThreshold === 0 ? result.makerCount : result.makerCount.filter(([, entry]) => entry.count >= excludeThreshold);
-    
     const showChart = await customChoice("是否显示图表数据展示？", [
       { label: "显示", value: "y" },
       { label: "不显示", value: "n" }
@@ -1670,20 +1505,11 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
       drawCumulativeChart(result.works);
     }
     displayResults(result, exchangeRate, filteredGenreCount, filteredMakerCount);
-    
     addDownloadButton(result, exchangeRate);
     addCompareButton(result, exchangeRate);
-    
-    // 添加重置按钮（位于页面右下角）
     addResetButton();
-
-    // 最后清除控制台所有信息
     console.clear();
   };
-
-  // -------------------------
-  // 添加重置按钮：位于页面右下角，红色背景
-  // -------------------------
   const addResetButton = () => {
     const resetBtn = document.createElement("button");
     resetBtn.id = "resetBtn";
@@ -1704,10 +1530,5 @@ ${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.
     });
     document.body.appendChild(resetBtn);
   };
-
-  // -------------------------
-  // 开始执行主逻辑
-  // -------------------------
   main();
-
 })();
