@@ -510,6 +510,8 @@ MIT License | 严禁用于商业用途
 > 📧 问题反馈：请附带控制台错误截图创建 Issue
 
 ---
+## Visitors (since 2025/03/17)
+![counter](https://count.getloli.com/@linyaocrush?name=DLsite-Purchase-Analyzer&theme=gelbooru&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto)
 
 ## 星标历史
 
