@@ -669,28 +669,8 @@
       cancelBtn.addEventListener("click", () => { closeModal(overlay, modal, () => { resolve(null); }); });
     });
   };
-  const exportCSV = (data, filename) => {
-  const BOM = "\uFEFF";
-  const csvContent = BOM + data.map(row => 
-    row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(",")
-  ).join("\n");
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.click();
-  };
- const showMarkdownPreviewAndDownload = (markdownContent, filename) => {
-  const BOM = "\uFEFF";
-  const blob = new Blob([BOM + markdownContent], { type: 'text/markdown;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
+  
+ 
   const loadChartJs = async () => {
     if (typeof Chart === "undefined") {
       return new Promise((resolve, reject) => {
@@ -1341,93 +1321,7 @@
     });
     document.body.appendChild(compareBtn);
   };
-  const addDownloadButton = (result, exchangeRate) => {
-    const downloadBtn = document.createElement("button");
-    downloadBtn.id = "downloadBtn";
-    downloadBtn.textContent = "下载文件";
-    downloadBtn.className = "btn";
-    downloadBtn.style.position = "fixed";
-    downloadBtn.style.top = "10px";
-    downloadBtn.style.left = "10px";
-    downloadBtn.style.zIndex = "100001";
-    downloadBtn.addEventListener("click", async () => {
-      const fileFormat = await customChoice("请选择保存格式：", [
-        { label: "全部下载", value: "0" },
-        { label: "仅保存 MD", value: "1" },
-        { label: "仅保存 CSV", value: "2" },
-        { label: "关闭", value: "cancel" }
-      ]);
-      if(fileFormat === "cancel") return;
-      const markdownContent = `
-# DLsite购买历史查询报告
 
-> 数据统计报告，生成时间：${new Date().toLocaleString()}
-
----
-
-## 统计概览
-
-- **购买总数**：${result.count} 部
-- **总消费金额**：${result.totalPrice} 日元 (${(result.totalPrice * exchangeRate).toFixed(2)} 人民币)
-
----
-
-## 各类型作品数排名
-
-| 类型 | 作品数目 |
-| ---- | -------- |
-${[...result.genreCount.entries()].map(([type, entry]) => `| ${type} ${entry.link ? `<a href="${entry.link}" target="_blank">跳转</a>` : ""} | ${entry.count} |`).join("\n")}
-
----
-
-## 各制作组作品数排名
-
-| 制作组 | 作品数目 |
-| ------ | -------- |
-${[...result.makerCount.entries()].map(([maker, entry]) => `| ${maker} ${entry.link ? `<a href="${entry.link}" target="_blank">跳转</a>` : ""} | ${entry.count} |`).join("\n")}
-
----
-
-## 已下架作品
-
-${result.eol.length > 0 ? (
-`| 购买日期 | 制作组 | 作品名称 | 价格 |
-| -------- | ------ | -------- | ---- |
-${result.eol.map(eol => `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.price} 日元 |`).join("\n")}`
-) : "暂无已下架作品"}
-        `;
-      if (fileFormat === "1") {
-        showMarkdownPreviewAndDownload(markdownContent, "DLsite购买历史查询.md");
-      } else if (fileFormat === "0") {
-        showMarkdownPreviewAndDownload(markdownContent, "DLsite购买历史查询.md");
-        exportCSV([
-          ["统计项目", "数量/金额"],
-          ["购买总数", result.count],
-          ["总消费金额", `${result.totalPrice} 日元 (${(result.totalPrice * exchangeRate).toFixed(2)} 人民币)`]
-        ], "DLsite购买历史查询.csv");
-      } else if (fileFormat === "2") {
-       const csvData = [
-  ["统计项目", "数量/金额"],
-  ["购买总数", result.count],
-  ["总消费金额", `${result.totalPrice} 日元 (${(result.totalPrice * exchangeRate).toFixed(2)} 人民币)`],
-  [],
-  ["类型统计"],
-  ["类型", "作品数目"],
-  ...result.genreCount.map(([type, entry]) => [type, entry.count]),
-  [],
-  ["制作组统计"],
-  ["制作组", "作品数目"],
-  ...result.makerCount.map(([maker, entry]) => [maker, entry.count]),
-  [],
-  ["已下架作品"],
-  ["购买日期", "制作组", "作品名称", "价格"],
-  ...result.eol.map(eol => [eol.date, eol.makerName, eol.name, eol.price])
-];
-exportCSV(csvData, "DLsite购买历史查询.csv");
-      }
-    });
-    document.body.appendChild(downloadBtn);
-  };
   const main = async () => {
     cleanup();
     const isValidDLsitePage = () => {
@@ -1522,7 +1416,6 @@ exportCSV(csvData, "DLsite购买历史查询.csv");
       drawCumulativeChart(result.works);
     }
     displayResults(result, exchangeRate, filteredGenreCount, filteredMakerCount);
-    addDownloadButton(result, exchangeRate);
     addCompareButton(result, exchangeRate);
     addResetButton();
     console.clear();
