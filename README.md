@@ -509,3 +509,15 @@ MIT License | 严禁用于商业用途
 > 🌐 项目地址：https://github.com/linyaocrush/DLsite-Purchase-Analyzer  
 > 📧 问题反馈：请附带控制台错误截图创建 Issue
 
+---
+
+## 星标历史
+
+<a href="https://star-history.com/#Qianyiaz/ChmlFrp_Professional_Launcher&Timeline">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=linyaocrush/DLsite-Purchase-Analyzer&type=Timeline&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=linyaocrush/DLsite-Purchase-Analyzer&type=Timeline" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=linyaocrush/DLsite-Purchase-Analyzer&type=Timeline" />
+ </picture>
+</a>
+
