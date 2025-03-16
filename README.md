@@ -513,7 +513,7 @@ MIT License | 严禁用于商业用途
 
 ## 星标历史
 
-<a href="https://star-history.com/#Qianyiaz/ChmlFrp_Professional_Launcher&Timeline">
+<a href="https://star-history.com/#linyaocrush/DLsite-Purchase-Analyzer&Timeline">
  <picture>
    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=linyaocrush/DLsite-Purchase-Analyzer&type=Timeline&theme=dark" />
    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=linyaocrush/DLsite-Purchase-Analyzer&type=Timeline" />
