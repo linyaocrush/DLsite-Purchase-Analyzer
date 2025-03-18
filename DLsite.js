@@ -670,7 +670,6 @@
     });
   };
   
- 
   const loadChartJs = async () => {
     if (typeof Chart === "undefined") {
       return new Promise((resolve, reject) => {
@@ -1322,6 +1321,176 @@
     document.body.appendChild(compareBtn);
   };
 
+  // 新增工具函数：下载文件
+  const downloadFile = (filename, content, mimeType = "text/plain") => {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // 生成 Markdown 格式内容
+  const generateMarkdown = (result, exchangeRate, filteredGenreCount, filteredMakerCount) => {
+    let md = `# DLsite 购买历史统计结果\n\n`;
+    md += `## 统计概览\n\n`;
+    md += `| 统计项目 | 数值 |\n`;
+    md += `| --- | --- |\n`;
+    md += `| 购买总数 | ${result.count} 部 |\n`;
+    md += `| 总消费金额 | ${result.totalPrice} 日元 (${(result.totalPrice * exchangeRate).toFixed(2)} 人民币) |\n\n`;
+    
+    md += `## 各类型作品数排名\n\n`;
+    md += `| 类型 | 作品数目 |\n`;
+    md += `| --- | --- |\n`;
+    filteredGenreCount.forEach(item => {
+        md += `| ${item[0]} | ${item[1].count} |\n`;
+    });
+    md += `\n`;
+    
+    md += `## 各制作组作品数排名\n\n`;
+    md += `| 制作组 | 作品数目 |\n`;
+    md += `| --- | --- |\n`;
+    filteredMakerCount.forEach(item => {
+        md += `| ${item[0]} | ${item[1].count} |\n`;
+    });
+    md += `\n`;
+    
+    md += `## 已下架作品\n\n`;
+    if (result.eol.length > 0) {
+        md += `| 购买日期 | 制作组 | 作品名称 | 价格（円） |\n`;
+        md += `| --- | --- | --- | --- |\n`;
+        result.eol.forEach(eol => {
+            md += `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.price} |\n`;
+        });
+    } else {
+        md += `暂无已下架作品\n`;
+    }
+    md += `\n`;
+    
+    md += `## 时间轴视图\n\n`;
+    const timelineGroups = {};
+    result.works.forEach(work => {
+      let day = new Date(work.date).toISOString().slice(0,10);
+      if(!timelineGroups[day]) timelineGroups[day] = [];
+      timelineGroups[day].push(work);
+    });
+    const sortedDates = Object.keys(timelineGroups).sort();
+    sortedDates.forEach(date => {
+        md += `### ${date} (${timelineGroups[date].length} 项)\n\n`;
+        md += `| 作品名称 | 制作组 | 价格（円） |\n`;
+        md += `| --- | --- | --- |\n`;
+        timelineGroups[date].forEach(work => {
+            md += `| ${work.name} | ${work.makerName} | ${work.price} |\n`;
+        });
+        md += `\n`;
+    });
+    return md;
+  };
+
+  // 生成 CSV 格式内容，添加 UTF-8 BOM 以解决日文乱码问题
+  const generateCSV = (result, exchangeRate, filteredGenreCount, filteredMakerCount) => {
+    let csv = "";
+    csv += "统计项目,数值\n";
+    csv += `购买总数,${result.count} 部\n`;
+    csv += `总消费金额,${result.totalPrice} 日元,${(result.totalPrice * exchangeRate).toFixed(2)} 人民币\n\n`;
+    
+    csv += "各类型作品数排名\n";
+    csv += "类型,作品数目\n";
+    filteredGenreCount.forEach(item => {
+        csv += `${item[0]},${item[1].count}\n`;
+    });
+    csv += "\n";
+    
+    csv += "各制作组作品数排名\n";
+    csv += "制作组,作品数目\n";
+    filteredMakerCount.forEach(item => {
+        csv += `${item[0]},${item[1].count}\n`;
+    });
+    csv += "\n";
+    
+    csv += "已下架作品\n";
+    csv += "购买日期,制作组,作品名称,价格（円）\n";
+    if (result.eol.length > 0) {
+        result.eol.forEach(eol => {
+            csv += `${eol.date},${eol.makerName},${eol.name},${eol.price}\n`;
+        });
+    } else {
+        csv += "暂无已下架作品\n";
+    }
+    csv += "\n";
+    
+    csv += "时间轴视图\n";
+    const timelineGroups = {};
+    result.works.forEach(work => {
+      let day = new Date(work.date).toISOString().slice(0,10);
+      if(!timelineGroups[day]) timelineGroups[day] = [];
+      timelineGroups[day].push(work);
+    });
+    const sortedDates = Object.keys(timelineGroups).sort();
+    sortedDates.forEach(date => {
+        csv += `日期: ${date} (${timelineGroups[date].length} 项)\n`;
+        csv += "作品名称,制作组,价格（円）\n";
+        timelineGroups[date].forEach(work => {
+            csv += `${work.name},${work.makerName},${work.price}\n`;
+        });
+        csv += "\n";
+    });
+    // 在 CSV 内容前添加 UTF-8 BOM
+    return "\ufeff" + csv;
+  };
+
+  // 新增“下载结果”按钮
+  const addDownloadButton = (result, exchangeRate, filteredGenreCount, filteredMakerCount) => {
+    const downloadBtn = document.createElement("button");
+    downloadBtn.id = "downloadBtn";
+    downloadBtn.textContent = "下载结果";
+    downloadBtn.className = "btn";
+    downloadBtn.style.position = "fixed";
+    downloadBtn.style.top = "10px";
+    downloadBtn.style.left = "10px";
+    downloadBtn.style.zIndex = "100001";
+    downloadBtn.addEventListener("click", async () => {
+         const choice = await customChoice("请选择要下载的文件格式：", [
+            { label: "Markdown (.md)", value: "md" },
+            { label: "CSV (.csv)", value: "csv" },
+            { label: "全部下载", value: "all" }
+         ]);
+         if(choice === "md" || choice === "all") {
+             const mdContent = generateMarkdown(result, exchangeRate, filteredGenreCount, filteredMakerCount);
+             downloadFile("DLsite_Result.md", mdContent, "text/markdown");
+         }
+         if(choice === "csv" || choice === "all") {
+             const csvContent = generateCSV(result, exchangeRate, filteredGenreCount, filteredMakerCount);
+             downloadFile("DLsite_Result.csv", csvContent, "text/csv");
+         }
+    });
+    document.body.appendChild(downloadBtn);
+  };
+
+  const addResetButton = () => {
+    const resetBtn = document.createElement("button");
+    resetBtn.id = "resetBtn";
+    resetBtn.textContent = "重置";
+    resetBtn.className = "btn";
+    resetBtn.style.position = "fixed";
+    resetBtn.style.bottom = "10px";
+    resetBtn.style.right = "10px";
+    resetBtn.style.background = "red";
+    resetBtn.style.color = "white";
+    resetBtn.style.zIndex = "100002";
+    resetBtn.addEventListener("click", () => {
+      cleanup();
+      const injectedStyle = document.getElementById("DLsiteStyle");
+      if (injectedStyle && injectedStyle.parentNode) {
+         injectedStyle.parentNode.removeChild(injectedStyle);
+      }
+    });
+    document.body.appendChild(resetBtn);
+  };
   const main = async () => {
     cleanup();
     const isValidDLsitePage = () => {
@@ -1417,28 +1586,9 @@
     }
     displayResults(result, exchangeRate, filteredGenreCount, filteredMakerCount);
     addCompareButton(result, exchangeRate);
+    addDownloadButton(result, exchangeRate, filteredGenreCount, filteredMakerCount);
     addResetButton();
     console.clear();
-  };
-  const addResetButton = () => {
-    const resetBtn = document.createElement("button");
-    resetBtn.id = "resetBtn";
-    resetBtn.textContent = "重置";
-    resetBtn.className = "btn";
-    resetBtn.style.position = "fixed";
-    resetBtn.style.bottom = "10px";
-    resetBtn.style.right = "10px";
-    resetBtn.style.background = "red";
-    resetBtn.style.color = "white";
-    resetBtn.style.zIndex = "100002";
-    resetBtn.addEventListener("click", () => {
-      cleanup();
-      const injectedStyle = document.getElementById("DLsiteStyle");
-      if (injectedStyle && injectedStyle.parentNode) {
-         injectedStyle.parentNode.removeChild(injectedStyle);
-      }
-    });
-    document.body.appendChild(resetBtn);
   };
   main();
 })();
