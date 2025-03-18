@@ -1461,11 +1461,11 @@
          ]);
          if(choice === "md" || choice === "all") {
              const mdContent = generateMarkdown(result, exchangeRate, filteredGenreCount, filteredMakerCount);
-             downloadFile("DLsite_Result.md", mdContent, "text/markdown");
+             downloadFile("DLsite购买分析.md", mdContent, "text/markdown");
          }
          if(choice === "csv" || choice === "all") {
              const csvContent = generateCSV(result, exchangeRate, filteredGenreCount, filteredMakerCount);
-             downloadFile("DLsite_Result.csv", csvContent, "text/csv");
+             downloadFile("DLsite购买分析.csv", csvContent, "text/csv");
          }
     });
     document.body.appendChild(downloadBtn);
