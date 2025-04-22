@@ -873,7 +873,19 @@
           csv += "\n";
       });
       return "\ufeff" + csv;
-    },
+      },
+      generateJSON(result, exchangeRate, filteredGenreCount, filteredMakerCount) {
+          const jsonObject = {
+              count: result.count,
+              totalPriceJPY: result.totalPrice,
+              totalPriceCNY: (result.totalPrice * exchangeRate).toFixed(2),
+              genreRanking: filteredGenreCount.map(([genre, entry]) => ({ genre, count: entry.count })),
+              makerRanking: filteredMakerCount.map(([maker, entry]) => ({ maker, count: entry.count })),
+              eol: result.eol,
+              works: result.works
+          };
+          return JSON.stringify(jsonObject, null, 2);
+      },
     addDownloadButton(result, exchangeRate, filteredGenreCount, filteredMakerCount) {
       const downloadBtn = document.createElement("button");
       downloadBtn.id = "downloadBtn";
@@ -886,7 +898,8 @@
       downloadBtn.addEventListener("click", async () => {
         const choice = await modal.customChoice("请选择要下载的文件格式：", [
           { label: "Markdown (.md)", value: "md" },
-          { label: "CSV (.csv)", value: "csv" },
+            { label: "CSV (.csv)", value: "csv" },
+            { label: "JSON (.json)", value: "json" },
           { label: "全部下载", value: "all" }
         ]);
         if(choice === "md" || choice === "all") {
@@ -896,7 +909,12 @@
         if(choice === "csv" || choice === "all") {
           const csvContent = downloadContent.generateCSV(result, exchangeRate, filteredGenreCount, filteredMakerCount);
           utils.downloadFile("DLsite_Result.csv", csvContent, "text/csv");
-        }
+          }
+        if (choice === "json" || choice === "all") {
+              const jsonContent = downloadContent.generateJSON(result, exchangeRate, filteredGenreCount, filteredMakerCount);
+              utils.downloadFile("DLsite_Result.json", jsonContent, "application/json");
+          }
+
       });
       document.body.appendChild(downloadBtn);
     }
@@ -1228,10 +1246,10 @@
     } else {
       dlurl = dlurl.replace(/type\/[^/]+/, "type/all");
     }
-    let exchangeRate = 0.04858;
+    let exchangeRate = 0.048;
     if (detailMode) {
       const exchangeChoice = await modal.customChoice("是否需要修改汇率？", [
-        { label: "使用默认 (1人民币 = 0.04858日元)", value: "default" },
+        { label: "使用默认 (1人民币 = 0.048日元)", value: "default" },
         { label: "修改汇率", value: "modify" }
       ]);
       if (exchangeChoice === "modify") {
