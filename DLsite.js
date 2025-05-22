@@ -46,7 +46,7 @@
         gsap.fromTo(element, { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.out" });
       } else {
         element.style.opacity = 0;
-        element.style.transition = "opacity 0.5s ease-in-out";
+        element.style.transition = "opacity 0.1s ease-in-out";
         setTimeout(() => { element.style.opacity = 1; }, 10);
       }
     },
@@ -55,7 +55,7 @@
         gsap.to(element, { opacity: 0, duration: 0.5, ease: "power2.in", onComplete: callback });
       } else {
         element.style.opacity = 0;
-        setTimeout(callback, 500);
+        setTimeout(callback, 200);
       }
     },
     animateModalIn(element) {
@@ -64,7 +64,7 @@
       } else {
         element.style.transform = "scale(0.8)";
         element.style.opacity = "0";
-        element.style.transition = "transform 0.5s ease-out, opacity 0.5s ease-out";
+        element.style.transition = "transform 0.1s ease-out, opacity 0.1s ease-out";
         setTimeout(() => {
           element.style.transform = "scale(1)";
           element.style.opacity = "1";
@@ -77,11 +77,11 @@
       } else {
         element.style.transform = "scale(1)";
         element.style.opacity = "1";
-        element.style.transition = "transform 0.5s ease-in, opacity 0.5s ease-in";
+        element.style.transition = "transform 0.1s ease-in, opacity 0.1s ease-in";
         setTimeout(() => {
           element.style.transform = "scale(0.8)";
           element.style.opacity = "0";
-          setTimeout(callback, 500);
+          setTimeout(callback, 200);
         }, 10);
       }
     }
@@ -949,7 +949,7 @@
            justify-content: center;
            z-index: 1000000;
            opacity: 0;
-           animation: fadeIn 0.5s forwards;
+           animation: fadeIn 0.1s forwards;
         }
         .modal-container {
            background: #ffffff;
@@ -959,7 +959,7 @@
            text-align: center;
            position: relative;
            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
-           animation: slideIn 0.5s forwards;
+           animation: slideIn 0.1s forwards;
         }
         @keyframes fadeIn {
            from { opacity: 0; }
@@ -985,7 +985,7 @@
            height: 100%;
            width: 0%;
            background: linear-gradient(90deg, #6a11cb, #2575fc);
-           transition: width 0.5s ease;
+           transition: width 0.1s ease;
         }
         .chart-container {
            background: #fff;
