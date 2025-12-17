@@ -1551,14 +1551,14 @@
       charts.drawTimelineChart(result.works);
       charts.drawCumulativeChart(result.works);
     }
-    displayResults(result, exchangeRate, filteredGenreCount, filteredMakerCount);
+    displayResults(result, exchangeRate, filteredGenreCount, filteredMakerCount, excludeThreshold);
     ui.addCompareButton(result, exchangeRate);
     downloadContent.addDownloadButton(result, exchangeRate, filteredGenreCount, filteredMakerCount);
     ui.addResetButton();
     console.clear();
   };
 
-  const displayResults = (result, exchangeRate, filteredGenreCount, filteredMakerCount) => {
+  const displayResults = (result, exchangeRate, filteredGenreCount, filteredMakerCount, excludeThreshold = 0) => {
     const container = charts.createChartContainer("resultWindow", "200px", "200px", "1000px", "800px", "查询结果");
     const contentDiv = container.querySelector(".chart-content");
     while (contentDiv.firstChild) contentDiv.removeChild(contentDiv.firstChild);
@@ -1588,80 +1588,83 @@
       return table;
     };
 
-    const overviewTable = createTable(
-      ["统计项目", "数量/金额"],
-      [
-        ["购买总数", `${result.count} 部`],
-        ["总消费金额", `${result.totalPrice} 日元 (${(result.totalPrice * exchangeRate).toFixed(2)} 人民币)`]
-      ]
-    );
-    contentDiv.appendChild(ui.createCollapsibleSection("统计概览", overviewTable, false));
+    const filterForm = document.createElement("div");
+    filterForm.style.display = "flex";
+    filterForm.style.flexWrap = "wrap";
+    filterForm.style.gap = "10px";
+    filterForm.style.marginBottom = "10px";
 
-    const genreRows = filteredGenreCount.map(([type, entry]) => {
-      const cellContainer = document.createElement("span");
-      cellContainer.textContent = type;
-      if (entry.link) {
-        const link = document.createElement("a");
-        link.href = entry.link;
-        link.target = "_blank";
-        link.style.marginLeft = "5px";
-        link.style.fontSize = "12px";
-        link.textContent = "跳转";
-        cellContainer.appendChild(link);
-      }
-      return [cellContainer, `${entry.count}`];
-    });
-    const genreTable = createTable(["类型", "作品数目"], genreRows);
-    contentDiv.appendChild(ui.createCollapsibleSection("各类型作品数排名", genreTable, false));
+    const keywordInput = document.createElement("input");
+    keywordInput.type = "text";
+    keywordInput.placeholder = "作品名关键词";
+    keywordInput.style.flex = "1";
 
-    const makerRows = filteredMakerCount.map(([maker, entry]) => {
-      const cellContainer = document.createElement("span");
-      cellContainer.textContent = maker;
-      if (entry.link) {
-        const link = document.createElement("a");
-        link.href = entry.link;
-        link.target = "_blank";
-        link.style.marginLeft = "5px";
-        link.style.fontSize = "12px";
-        link.textContent = "跳转";
-        cellContainer.appendChild(link);
-      }
-      return [cellContainer, `${entry.count}`];
+    const makerSelect = document.createElement("select");
+    const allOption = document.createElement("option");
+    allOption.value = "";
+    allOption.textContent = "全部制作组";
+    makerSelect.appendChild(allOption);
+    const makerNames = Array.isArray(result.makerCount) ? result.makerCount.map(item => item[0]) : [...result.makerCount.keys()];
+    makerNames.sort().forEach(name => {
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = name;
+      makerSelect.appendChild(option);
     });
-    const makerTable = createTable(["制作组", "作品数目"], makerRows);
-    contentDiv.appendChild(ui.createCollapsibleSection("各制作组作品数排名", makerTable, false));
 
-    if (result.eol.length > 0) {
-      const eolRows = result.eol.map(eol => [eol.date, eol.makerName, eol.name, `${eol.price} 日元`]);
-      const eolTable = createTable(["购买日期", "制作组", "作品名称", "价格"], eolRows);
-      contentDiv.appendChild(ui.createCollapsibleSection("已下架作品", eolTable, false));
-    } else {
-      const noEol = document.createElement("p");
-      noEol.textContent = "暂无已下架作品";
-      contentDiv.appendChild(ui.createCollapsibleSection("已下架作品", noEol, false));
-    }
+    const startDateInput = document.createElement("input");
+    startDateInput.type = "date";
+    startDateInput.style.flex = "0 0 160px";
+    const endDateInput = document.createElement("input");
+    endDateInput.type = "date";
+    endDateInput.style.flex = "0 0 160px";
 
-    const timelineContainer = document.createElement("div");
-    const timelineGroups = {};
-    result.works.forEach(work => {
-      let day = new Date(work.date).toISOString().slice(0,10);
-      if(!timelineGroups[day]) timelineGroups[day] = [];
-      timelineGroups[day].push(work);
-    });
-    const sortedDates = Object.keys(timelineGroups).sort();
-    sortedDates.forEach(date => {
-      const section = document.createElement("div");
-      const title = document.createElement("strong");
-      title.textContent = `${date} (${timelineGroups[date].length} 项)`;
-      section.appendChild(title);
-      const table = createTable(
-        ["作品名称", "制作组", "价格"],
-        timelineGroups[date].map(work => [work.name, work.makerName, `${work.price} 日元`])
-      );
-      section.appendChild(table);
-      timelineContainer.appendChild(section);
-    });
-    contentDiv.appendChild(ui.createCollapsibleSection("时间轴视图", timelineContainer, true));
+    const minPriceInput = document.createElement("input");
+    minPriceInput.type = "number";
+    minPriceInput.placeholder = "最低价格";
+    minPriceInput.style.flex = "0 0 120px";
+    const maxPriceInput = document.createElement("input");
+    maxPriceInput.type = "number";
+    maxPriceInput.placeholder = "最高价格";
+    maxPriceInput.style.flex = "0 0 120px";
+
+    const applyFilterBtn = document.createElement("button");
+    applyFilterBtn.textContent = "应用过滤";
+    applyFilterBtn.className = "btn";
+    applyFilterBtn.style.flex = "0 0 100px";
+
+    const redrawChartsBtn = document.createElement("button");
+    redrawChartsBtn.textContent = "根据当前过滤器重绘图表";
+    redrawChartsBtn.className = "btn";
+    redrawChartsBtn.style.flex = "1 1 200px";
+
+    filterForm.appendChild(keywordInput);
+    filterForm.appendChild(makerSelect);
+    filterForm.appendChild(startDateInput);
+    filterForm.appendChild(endDateInput);
+    filterForm.appendChild(minPriceInput);
+    filterForm.appendChild(maxPriceInput);
+    filterForm.appendChild(applyFilterBtn);
+    filterForm.appendChild(redrawChartsBtn);
+    contentDiv.appendChild(filterForm);
+
+    const overviewContent = document.createElement("div");
+    const genreContent = document.createElement("div");
+    const makerContent = document.createElement("div");
+    const eolContent = document.createElement("div");
+    const timelineContent = document.createElement("div");
+
+    const overviewSection = ui.createCollapsibleSection("统计概览", overviewContent, false);
+    const genreSection = ui.createCollapsibleSection("各类型作品数排名", genreContent, false);
+    const makerSection = ui.createCollapsibleSection("各制作组作品数排名", makerContent, false);
+    const eolSection = ui.createCollapsibleSection("已下架作品", eolContent, false);
+    const timelineSection = ui.createCollapsibleSection("时间轴视图", timelineContent, true);
+
+    contentDiv.appendChild(overviewSection);
+    contentDiv.appendChild(genreSection);
+    contentDiv.appendChild(makerSection);
+    contentDiv.appendChild(eolSection);
+    contentDiv.appendChild(timelineSection);
 
     const authorContainer = document.createElement("div");
     const p1 = document.createElement("p");
@@ -1676,6 +1679,232 @@
     authorContainer.appendChild(p1);
     authorContainer.appendChild(p2);
     contentDiv.appendChild(ui.createCollapsibleSection("作者信息", authorContainer, false));
+
+    const computeCounts = (works) => {
+      const genreMap = new Map();
+      const makerMap = new Map();
+      const applyThreshold = (entries) => excludeThreshold === 0 ? entries : entries.filter(([, entry]) => entry.count >= excludeThreshold);
+
+      const findGenreEntry = (genre) => {
+        if (result.genreCount instanceof Map) return result.genreCount.get(genre);
+        if (Array.isArray(result.genreCount)) {
+          const entry = result.genreCount.find(item => item[0] === genre);
+          return entry ? entry[1] : null;
+        }
+        return null;
+      };
+
+      const findMakerEntry = (maker) => {
+        if (result.makerCount instanceof Map) return result.makerCount.get(maker);
+        if (Array.isArray(result.makerCount)) {
+          const entry = result.makerCount.find(item => item[0] === maker);
+          return entry ? entry[1] : null;
+        }
+        return null;
+      };
+
+      const addGenre = (genre) => {
+        if (!genre) return;
+        const originEntry = findGenreEntry(genre);
+        const link = originEntry && originEntry.link ? originEntry.link : "";
+        const existing = genreMap.get(genre) || { count: 0, link };
+        existing.count++;
+        if (!existing.link && link) existing.link = link;
+        genreMap.set(genre, existing);
+      };
+
+      works.forEach(work => {
+        addGenre(work.genre);
+        if (Array.isArray(work.mainGenre)) {
+          work.mainGenre.forEach(g => addGenre(g));
+        }
+        const makerOrigin = findMakerEntry(work.makerName);
+        const makerLink = makerOrigin && makerOrigin.link ? makerOrigin.link : "";
+        const makerEntry = makerMap.get(work.makerName) || { count: 0, link: makerLink };
+        makerEntry.count++;
+        if (!makerEntry.link && makerLink) makerEntry.link = makerLink;
+        makerMap.set(work.makerName, makerEntry);
+      });
+
+      const genreArray = [...genreMap.entries()].sort((a, b) => b[1].count - a[1].count);
+      const makerArray = [...makerMap.entries()].sort((a, b) => b[1].count - a[1].count);
+
+      return {
+        genreArray,
+        makerArray,
+        filteredGenreCount: applyThreshold(genreArray),
+        filteredMakerCount: applyThreshold(makerArray)
+      };
+    };
+
+    const renderSections = (works, genreCountArr, makerCountArr) => {
+      overviewContent.innerHTML = "";
+      const totalPrice = works.reduce((sum, work) => sum + (work.price || 0), 0);
+      const overviewTable = createTable(
+        ["统计项目", "数量/金额"],
+        [
+          ["购买总数", `${works.length} 部`],
+          ["总消费金额", `${totalPrice} 日元 (${(totalPrice * exchangeRate).toFixed(2)} 人民币)`]
+        ]
+      );
+      overviewContent.appendChild(overviewTable);
+
+      genreContent.innerHTML = "";
+      if (genreCountArr.length === 0) {
+        const empty = document.createElement("p");
+        empty.textContent = "暂无符合条件的类型数据";
+        genreContent.appendChild(empty);
+      } else {
+        const genreRows = genreCountArr.map(([type, entry]) => {
+          const cellContainer = document.createElement("span");
+          cellContainer.textContent = type;
+          if (entry.link) {
+            const link = document.createElement("a");
+            link.href = entry.link;
+            link.target = "_blank";
+            link.style.marginLeft = "5px";
+            link.style.fontSize = "12px";
+            link.textContent = "跳转";
+            cellContainer.appendChild(link);
+          }
+          return [cellContainer, `${entry.count}`];
+        });
+        const genreTable = createTable(["类型", "作品数目"], genreRows);
+        genreContent.appendChild(genreTable);
+      }
+
+      makerContent.innerHTML = "";
+      if (makerCountArr.length === 0) {
+        const empty = document.createElement("p");
+        empty.textContent = "暂无符合条件的制作组数据";
+        makerContent.appendChild(empty);
+      } else {
+        const makerRows = makerCountArr.map(([maker, entry]) => {
+          const cellContainer = document.createElement("span");
+          cellContainer.textContent = maker;
+          if (entry.link) {
+            const link = document.createElement("a");
+            link.href = entry.link;
+            link.target = "_blank";
+            link.style.marginLeft = "5px";
+            link.style.fontSize = "12px";
+            link.textContent = "跳转";
+            cellContainer.appendChild(link);
+          }
+          return [cellContainer, `${entry.count}`];
+        });
+        const makerTable = createTable(["制作组", "作品数目"], makerRows);
+        makerContent.appendChild(makerTable);
+      }
+
+      eolContent.innerHTML = "";
+      const eolWorks = works.filter(work => !work.url);
+      if (eolWorks.length > 0) {
+        const eolRows = eolWorks.map(eol => [eol.date, eol.makerName, eol.name, `${eol.price} 日元`]);
+        const eolTable = createTable(["购买日期", "制作组", "作品名称", "价格"], eolRows);
+        eolContent.appendChild(eolTable);
+      } else {
+        const noEol = document.createElement("p");
+        noEol.textContent = "暂无已下架作品";
+        eolContent.appendChild(noEol);
+      }
+
+      timelineContent.innerHTML = "";
+      if (works.length === 0) {
+        const empty = document.createElement("p");
+        empty.textContent = "暂无数据";
+        timelineContent.appendChild(empty);
+      } else {
+        const timelineGroups = {};
+        works.forEach(work => {
+          let day = new Date(work.date).toISOString().slice(0,10);
+          if(!timelineGroups[day]) timelineGroups[day] = [];
+          timelineGroups[day].push(work);
+        });
+        const sortedDates = Object.keys(timelineGroups).sort();
+        sortedDates.forEach(date => {
+          const section = document.createElement("div");
+          const title = document.createElement("strong");
+          title.textContent = `${date} (${timelineGroups[date].length} 项)`;
+          section.appendChild(title);
+          const table = createTable(
+            ["作品名称", "制作组", "价格"],
+            timelineGroups[date].map(work => [work.name, work.makerName, `${work.price} 日元`])
+          );
+          section.appendChild(table);
+          timelineContent.appendChild(section);
+        });
+      }
+    };
+
+    const updateChartsWithFilteredData = (works, genreCountArr, makerCountArr) => {
+      if (typeof Chart === "undefined") return;
+      const genreType = window.genreChartObj ? window.genreChartObj.config.type : "bar";
+      const makerType = window.makerChartObj ? window.makerChartObj.config.type : "bar";
+      if (document.getElementById("chartContainer1")) {
+        charts.drawGenreChart(genreCountArr, works, genreType);
+      }
+      if (document.getElementById("chartContainer2")) {
+        charts.drawMakerChart(makerCountArr, works, makerType);
+      }
+      if (document.getElementById("chartContainer3")) {
+        charts.drawTimelineChart(works);
+      }
+      if (document.getElementById("chartContainer4")) {
+        charts.drawCumulativeChart(works);
+      }
+    };
+
+    const getFilteredWorks = () => {
+      const keyword = keywordInput.value.trim().toLowerCase();
+      const maker = makerSelect.value;
+      const startDate = startDateInput.value ? new Date(startDateInput.value) : null;
+      const endDate = endDateInput.value ? new Date(endDateInput.value) : null;
+      if (endDate) endDate.setHours(23, 59, 59, 999);
+      const minPrice = parseInt(minPriceInput.value, 10);
+      const maxPrice = parseInt(maxPriceInput.value, 10);
+
+      return result.works.filter(work => {
+        const nameMatch = !keyword || work.name.toLowerCase().includes(keyword);
+        const makerMatch = !maker || work.makerName === maker;
+        const workDate = new Date(work.date);
+        const validDate = workDate.toString() !== "Invalid Date";
+        const startMatch = !startDate || (validDate && workDate >= startDate);
+        const endMatch = !endDate || (validDate && workDate <= endDate);
+        const minMatch = isNaN(minPrice) || work.price >= minPrice;
+        const maxMatch = isNaN(maxPrice) || work.price <= maxPrice;
+        return nameMatch && makerMatch && startMatch && endMatch && minMatch && maxMatch;
+      });
+    };
+
+    let lastFilteredWorks = result.works.slice();
+    let lastGenreCount = filteredGenreCount || [];
+    let lastMakerCount = filteredMakerCount || [];
+
+    const applyFilters = () => {
+      const works = getFilteredWorks();
+      const counts = computeCounts(works);
+      lastFilteredWorks = works;
+      lastGenreCount = counts.filteredGenreCount;
+      lastMakerCount = counts.filteredMakerCount;
+      renderSections(works, counts.filteredGenreCount, counts.filteredMakerCount);
+      updateChartsWithFilteredData(works, counts.filteredGenreCount, counts.filteredMakerCount);
+    };
+
+    [keywordInput, makerSelect, startDateInput, endDateInput, minPriceInput, maxPriceInput].forEach(input => {
+      input.addEventListener("input", applyFilters);
+      input.addEventListener("change", applyFilters);
+    });
+    applyFilterBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      applyFilters();
+    });
+    redrawChartsBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      updateChartsWithFilteredData(lastFilteredWorks, lastGenreCount, lastMakerCount);
+    });
+
+    applyFilters();
 
     if (ui.errorLogs.length > 0) {
       const errorPre = document.createElement("pre");
