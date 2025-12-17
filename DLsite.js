@@ -130,7 +130,7 @@
       return new Promise(resolve => {
         const { overlay, modalContainer } = modal.createModal("400px");
         const msgDiv = document.createElement("div");
-        msgDiv.innerHTML = message;
+        msgDiv.textContent = message;
         modalContainer.appendChild(msgDiv);
         const input = document.createElement("input");
         input.type = "text";
@@ -162,7 +162,7 @@
       return new Promise(resolve => {
         const { overlay, modalContainer } = modal.createModal("400px");
         const msgDiv = document.createElement("div");
-        msgDiv.innerHTML = message;
+        msgDiv.textContent = message;
         modalContainer.appendChild(msgDiv);
         const btnContainer = document.createElement("div");
         btnContainer.style.marginTop = "15px";
@@ -187,7 +187,7 @@
       return new Promise(resolve => {
         const { overlay, modalContainer } = modal.createModal("500px");
         const msgDiv = document.createElement("div");
-        msgDiv.innerHTML = message;
+        msgDiv.textContent = message;
         modalContainer.appendChild(msgDiv);
         const btnContainer = document.createDocumentFragment();
         options.forEach(opt => {
