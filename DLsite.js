@@ -691,6 +691,18 @@
         return "";
       }
     },
+    async fetchPageWithRetry(url, pageNum, maxRetries = 2) {
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        const pageText = await dataProcessor.fetchUrlAsync(url + pageNum);
+        if (pageText) return pageText;
+        if (attempt < maxRetries) {
+          utils.styledLog(`🔁 第 ${attempt + 1} 次重试页面 ${pageNum}`, "color: #ff8c00; font-weight: bold;");
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+      }
+      ui.errorLogs.push(`Page ${pageNum} failed after ${maxRetries + 1} attempts`);
+      return null;
+    },
     async processPage(doc, result, detailMode) {
       const trElms = doc.querySelectorAll(".work_list_main tr:not(.item_name)");
       const detailPromises = [];
@@ -752,27 +764,41 @@
     },
     async fetchAllPages(dlurl, detailMode, updateProgressCallback) {
       const result = { count: 0, totalPrice: 0, works: [], genreCount: new Map(), makerCount: new Map(), eol: [] };
-      const firstPageText = await dataProcessor.fetchUrlAsync(dlurl + "1");
+      const concurrencyLimit = 4;
+      const firstPageText = await dataProcessor.fetchPageWithRetry(dlurl, 1);
+      if (!firstPageText) {
+        ui.errorLogs.push("无法获取第一页数据，终止任务。");
+        return result;
+      }
       const firstDoc = new DOMParser().parseFromString(firstPageText, "text/html");
       let lastPage = 1;
       const lastPageElm = firstDoc.querySelector(".page_no ul li:last-child a");
       if (lastPageElm) { lastPage = parseInt(lastPageElm.dataset.value); }
       await dataProcessor.processPage(firstDoc, result, detailMode);
-      updateProgressCallback(1, lastPage);
-      const promises = [];
-      for (let i = 2; i <= lastPage; i++) {
-        promises.push((async (pageNum) => {
-          try {
-            const pageText = await dataProcessor.fetchUrlAsync(dlurl + pageNum);
-            const doc = new DOMParser().parseFromString(pageText, "text/html");
-            await dataProcessor.processPage(doc, result, detailMode);
-          } catch (e) {
-            ui.errorLogs.push(`Error fetching page ${pageNum}: ${e}`);
-          }
-          updateProgressCallback(pageNum, lastPage);
-        })(i));
+      const remainingPages = Math.max(0, lastPage - 1);
+      const totalBatches = Math.ceil(remainingPages / concurrencyLimit) + 1;
+      let currentBatch = 1;
+      updateProgressCallback(currentBatch, totalBatches);
+      let nextPage = 2;
+      while (nextPage <= lastPage) {
+        const batchTasks = [];
+        for (let i = 0; i < concurrencyLimit && nextPage <= lastPage; i++, nextPage++) {
+          const pageNum = nextPage;
+          batchTasks.push((async () => {
+            try {
+              const pageText = await dataProcessor.fetchPageWithRetry(dlurl, pageNum);
+              if (!pageText) return;
+              const doc = new DOMParser().parseFromString(pageText, "text/html");
+              await dataProcessor.processPage(doc, result, detailMode);
+            } catch (e) {
+              ui.errorLogs.push(`Error fetching page ${pageNum}: ${e}`);
+            }
+          })());
+        }
+        await Promise.all(batchTasks);
+        currentBatch++;
+        updateProgressCallback(Math.min(currentBatch, totalBatches), totalBatches);
       }
-      await Promise.all(promises);
       return result;
     }
   };
@@ -980,12 +1006,36 @@
            overflow: hidden;
            z-index: 10000;
            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           color: #fff;
+           font-weight: bold;
+           font-size: 12px;
+        }
+        .progress-text {
+           position: absolute;
+           width: 100%;
+           height: 100%;
+           left: 0;
+           top: 0;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           text-align: center;
+           z-index: 2;
+           pointer-events: none;
+           text-shadow: 0 1px 2px rgba(0,0,0,0.3);
         }
         .inner-progress {
            height: 100%;
            width: 0%;
            background: linear-gradient(90deg, #6a11cb, #2575fc);
            transition: width 0.1s ease;
+           position: absolute;
+           top: 0;
+           left: 0;
+           z-index: 1;
         }
         .chart-container {
            background: #fff;
@@ -1127,7 +1177,7 @@
       `;
       document.head.appendChild(style);
     },
-    updateProgressBar(progress) {
+    updateProgressBar(progress, currentBatch, totalBatches) {
       let progressBar = document.getElementById("progressBar");
       if (!progressBar) {
         progressBar = document.createElement("div");
@@ -1136,10 +1186,24 @@
         const innerBar = document.createElement("div");
         innerBar.id = "innerProgressBar";
         innerBar.className = "inner-progress";
+        const progressText = document.createElement("div");
+        progressText.id = "progressText";
+        progressText.className = "progress-text";
+        progressText.textContent = "准备中...";
         progressBar.appendChild(innerBar);
+        progressBar.appendChild(progressText);
         document.body.appendChild(progressBar);
       }
       document.getElementById("innerProgressBar").style.width = progress + "%";
+      const textElem = document.getElementById("progressText");
+      if (textElem) {
+        const rounded = Math.min(100, Math.max(0, Math.round(progress)));
+        if (currentBatch && totalBatches) {
+          textElem.textContent = `批次 ${currentBatch} / ${totalBatches} (${rounded}%)`;
+        } else {
+          textElem.textContent = isNaN(rounded) ? "准备中..." : `${rounded}%`;
+        }
+      }
     },
     addCompareButton(result, exchangeRate) {
       const compareBtn = document.createElement("button");
@@ -1262,8 +1326,8 @@
       }
     }
     console.group("📄 页面抓取进度");
-    const result = await dataProcessor.fetchAllPages(dlurl, detailMode, (page, total) => {
-      ui.updateProgressBar((page / total) * 100);
+    const result = await dataProcessor.fetchAllPages(dlurl, detailMode, (currentBatch, totalBatches) => {
+      ui.updateProgressBar((currentBatch / totalBatches) * 100, currentBatch, totalBatches);
     });
     console.groupEnd();
     const excludeResponse = await modal.customPrompt("请输入要排除的最少作品数目（例如输入 3 表示排除数目小于 3 的作品类型）：", "0");
