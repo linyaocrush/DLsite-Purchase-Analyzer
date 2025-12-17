@@ -130,7 +130,7 @@
       return new Promise(resolve => {
         const { overlay, modalContainer } = modal.createModal("400px");
         const msgDiv = document.createElement("div");
-        msgDiv.innerHTML = message;
+        msgDiv.textContent = message;
         modalContainer.appendChild(msgDiv);
         const input = document.createElement("input");
         input.type = "text";
@@ -162,7 +162,7 @@
       return new Promise(resolve => {
         const { overlay, modalContainer } = modal.createModal("400px");
         const msgDiv = document.createElement("div");
-        msgDiv.innerHTML = message;
+        msgDiv.textContent = message;
         modalContainer.appendChild(msgDiv);
         const btnContainer = document.createElement("div");
         btnContainer.style.marginTop = "15px";
@@ -187,7 +187,7 @@
       return new Promise(resolve => {
         const { overlay, modalContainer } = modal.createModal("500px");
         const msgDiv = document.createElement("div");
-        msgDiv.innerHTML = message;
+        msgDiv.textContent = message;
         modalContainer.appendChild(msgDiv);
         const btnContainer = document.createDocumentFragment();
         options.forEach(opt => {
@@ -347,7 +347,7 @@
         document.body.appendChild(container);
         const dragButton = document.createElement("div");
         dragButton.className = "drag-button";
-        dragButton.innerHTML = "≡";
+        dragButton.textContent = "≡";
         container.appendChild(dragButton);
         const saveButton = document.createElement("button");
         saveButton.textContent = "保存";
@@ -410,7 +410,19 @@
       currentType = currentType || "bar";
       const container = charts.createChartContainer("chartContainer1", "100px", "100px", "500px", "400px", "作品类型统计");
       const contentDiv = container.querySelector(".chart-content");
-      contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">作品类型统计 <button id="toggleGenreChartBtn" class="btn" style="margin-left: 10px; font-size: 12px;">切换为${currentType === 'bar' ? '饼状图' : '柱状图'}</button></h3>`;
+      while (contentDiv.firstChild) contentDiv.removeChild(contentDiv.firstChild);
+      const header = document.createElement("h3");
+      header.style.textAlign = "center";
+      header.style.margin = "0";
+      header.textContent = "作品类型统计 ";
+      const toggleBtn = document.createElement("button");
+      toggleBtn.id = "toggleGenreChartBtn";
+      toggleBtn.className = "btn";
+      toggleBtn.style.marginLeft = "10px";
+      toggleBtn.style.fontSize = "12px";
+      toggleBtn.textContent = `切换为${currentType === 'bar' ? '饼状图' : '柱状图'}`;
+      header.appendChild(toggleBtn);
+      contentDiv.appendChild(header);
       const canvas = document.createElement("canvas");
       canvas.style.width = "100%";
       canvas.style.height = "calc(100% - 30px)";
@@ -467,7 +479,19 @@
       currentType = currentType || "bar";
       const container = charts.createChartContainer("chartContainer2", "100px", "650px", "500px", "400px", "制作组统计");
       const contentDiv = container.querySelector(".chart-content");
-      contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">制作组统计 <button id="toggleMakerChartBtn" class="btn" style="margin-left: 10px; font-size: 12px;">切换为${currentType === 'bar' ? '饼状图' : '柱状图'}</button></h3>`;
+      while (contentDiv.firstChild) contentDiv.removeChild(contentDiv.firstChild);
+      const header = document.createElement("h3");
+      header.style.textAlign = "center";
+      header.style.margin = "0";
+      header.textContent = "制作组统计 ";
+      const toggleBtn = document.createElement("button");
+      toggleBtn.id = "toggleMakerChartBtn";
+      toggleBtn.className = "btn";
+      toggleBtn.style.marginLeft = "10px";
+      toggleBtn.style.fontSize = "12px";
+      toggleBtn.textContent = `切换为${currentType === 'bar' ? '饼状图' : '柱状图'}`;
+      header.appendChild(toggleBtn);
+      contentDiv.appendChild(header);
       const canvas = document.createElement("canvas");
       canvas.style.width = "100%";
       canvas.style.height = "calc(100% - 30px)";
@@ -530,7 +554,12 @@
       const counts = sortedDates.map(date => groups[date]);
       const container = charts.createChartContainer("chartContainer3", "550px", "100px", "500px", "400px", "每日购买数量");
       const contentDiv = container.querySelector(".chart-content");
-      contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">每日购买数量</h3>`;
+      while (contentDiv.firstChild) contentDiv.removeChild(contentDiv.firstChild);
+      const header = document.createElement("h3");
+      header.style.textAlign = "center";
+      header.style.margin = "0";
+      header.textContent = "每日购买数量";
+      contentDiv.appendChild(header);
       const canvas = document.createElement("canvas");
       canvas.style.width = "100%";
       canvas.style.height = "calc(100% - 30px)";
@@ -583,7 +612,12 @@
       sortedDates.forEach(date => { total += groups[date]; cumulative.push(total); });
       const container = charts.createChartContainer("chartContainer4", "550px", "650px", "500px", "400px", "累计消费金额");
       const contentDiv = container.querySelector(".chart-content");
-      contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">累计消费金额（日元）</h3>`;
+      while (contentDiv.firstChild) contentDiv.removeChild(contentDiv.firstChild);
+      const header = document.createElement("h3");
+      header.style.textAlign = "center";
+      header.style.margin = "0";
+      header.textContent = "累计消费金额（日元）";
+      contentDiv.appendChild(header);
       const canvas = document.createElement("canvas");
       canvas.style.width = "100%";
       canvas.style.height = "calc(100% - 30px)";
@@ -636,7 +670,12 @@
       let left = (150 + ui.comparisonCounter * 20) + "px";
       const container = charts.createChartContainer(containerId, top, left, "600px", "400px", title);
       const contentDiv = container.querySelector(".chart-content");
-      contentDiv.innerHTML = `<h3 style="text-align:center; margin: 0;">${title}</h3>`;
+      while (contentDiv.firstChild) contentDiv.removeChild(contentDiv.firstChild);
+      const header = document.createElement("h3");
+      header.style.textAlign = "center";
+      header.style.margin = "0";
+      header.textContent = title;
+      contentDiv.appendChild(header);
       const canvas = document.createElement("canvas");
       canvas.style.width = "100%";
       canvas.style.height = "calc(100% - 30px)";
@@ -680,6 +719,152 @@
     }
   };
 
+  const compareAllAspects = (result, periods, exchangeRate, aspects) => {
+    const filterByPeriod = (works, period) => {
+      return works.filter(work => {
+        const d = new Date(work.date);
+        return d >= period.start && d <= period.end;
+      });
+    };
+
+    const period1Works = filterByPeriod(result.works, periods.period1);
+    const period2Works = filterByPeriod(result.works, periods.period2);
+
+    const countByKey = (works, keyGetter) => {
+      const map = new Map();
+      works.forEach(work => {
+        const key = keyGetter(work);
+        if (!key) return;
+        map.set(key, (map.get(key) || 0) + 1);
+      });
+      return map;
+    };
+
+    const collectGenres = work => {
+      const genres = [];
+      if (Array.isArray(work.mainGenre) && work.mainGenre.length > 0) {
+        genres.push(...work.mainGenre);
+      }
+      if (work.genre) genres.push(work.genre);
+      return genres;
+    };
+
+    const countGenres = works => {
+      const map = new Map();
+      works.forEach(work => {
+        const genres = collectGenres(work);
+        if (genres.length === 0) return;
+        genres.forEach(g => {
+          map.set(g, (map.get(g) || 0) + 1);
+        });
+      });
+      return map;
+    };
+
+    const topEntries = (map, limit = 10) => {
+      return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit);
+    };
+
+    if (aspects.prefType) {
+      const genres1 = countGenres(period1Works);
+      const genres2 = countGenres(period2Works);
+      const allGenres = new Set([...genres1.keys(), ...genres2.keys()]);
+      const labels = [...allGenres];
+      const data1 = labels.map(label => genres1.get(label) || 0);
+      const data2 = labels.map(label => genres2.get(label) || 0);
+      charts.drawCombinedBarChart(
+        "不同类型作品偏好对比",
+        labels,
+        data1,
+        data2,
+        "时间段 1 作品数",
+        "时间段 2 作品数",
+        "作品数",
+        `prefType_${Date.now()}`
+      );
+    }
+
+    if (aspects.prefMaker || aspects.makerOverall) {
+      const makers1 = countByKey(period1Works, work => work.makerName || "未知");
+      const makers2 = countByKey(period2Works, work => work.makerName || "未知");
+      const allMakers = [...new Set([...makers1.keys(), ...makers2.keys()])];
+      const combinedSorted = allMakers
+        .map(maker => ({ maker, total: (makers1.get(maker) || 0) + (makers2.get(maker) || 0) }))
+        .sort((a, b) => b.total - a.total);
+      const topMakers = combinedSorted.slice(0, 10).map(entry => entry.maker);
+      if (aspects.prefMaker && topMakers.length > 0) {
+        const data1 = topMakers.map(maker => makers1.get(maker) || 0);
+        const data2 = topMakers.map(maker => makers2.get(maker) || 0);
+        charts.drawCombinedBarChart(
+          "不同制作组偏好对比",
+          topMakers,
+          data1,
+          data2,
+          "时间段 1 作品数",
+          "时间段 2 作品数",
+          "作品数",
+          `prefMaker_${Date.now()}`
+        );
+      }
+
+      if (aspects.makerOverall) {
+        const summarize = works => ({
+          count: works.length,
+          totalPrice: works.reduce((sum, w) => sum + (w.price || 0), 0)
+        });
+        const sum1 = summarize(period1Works);
+        const sum2 = summarize(period2Works);
+        const summaryText =
+          `时间段 1：\n  作品数：${sum1.count}\n  总价：${sum1.totalPrice} 日元 (${(sum1.totalPrice * exchangeRate).toFixed(2)} 人民币)\n\n` +
+          `时间段 2：\n  作品数：${sum2.count}\n  总价：${sum2.totalPrice} 日元 (${(sum2.totalPrice * exchangeRate).toFixed(2)} 人民币)`;
+        modal.customAlert(summaryText);
+      }
+    }
+
+    if (aspects.makerType) {
+      const makerGenreMap = works => {
+        const outer = new Map();
+        works.forEach(work => {
+          const maker = work.makerName || "未知";
+          const genres = collectGenres(work);
+          if (genres.length === 0) return;
+          if (!outer.has(maker)) outer.set(maker, new Map());
+          const inner = outer.get(maker);
+          genres.forEach(g => inner.set(g, (inner.get(g) || 0) + 1));
+        });
+        return outer;
+      };
+
+      const map1 = makerGenreMap(period1Works);
+      const map2 = makerGenreMap(period2Works);
+      const makerTotals = new Map();
+      const addTotals = (map) => {
+        map.forEach((genreMap, maker) => {
+          const total = [...genreMap.values()].reduce((s, c) => s + c, 0);
+          makerTotals.set(maker, (makerTotals.get(maker) || 0) + total);
+        });
+      };
+      addTotals(map1);
+      addTotals(map2);
+      const topMakers = [...makerTotals.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(entry => entry[0]);
+
+      let text = "制作组作品类型对比（前 5 制作组）\n\n";
+      topMakers.forEach(maker => {
+        const g1 = map1.get(maker) || new Map();
+        const g2 = map2.get(maker) || new Map();
+        const allGenres = new Set([...g1.keys(), ...g2.keys()]);
+        text += `${maker}:\n`;
+        allGenres.forEach(genre => {
+          const v1 = g1.get(genre) || 0;
+          const v2 = g2.get(genre) || 0;
+          text += `  ${genre}: 时间段1 ${v1} / 时间段2 ${v2}\n`;
+        });
+        text += "\n";
+      });
+      modal.customAlert(text);
+    }
+  };
+
   const dataProcessor = {
     async fetchUrlAsync(url) {
       try {
@@ -690,6 +875,18 @@
         ui.errorLogs.push("Error fetching " + url + ": " + e);
         return "";
       }
+    },
+    async fetchPageWithRetry(url, pageNum, maxRetries = 2) {
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        const pageText = await dataProcessor.fetchUrlAsync(url + pageNum);
+        if (pageText) return pageText;
+        if (attempt < maxRetries) {
+          utils.styledLog(`🔁 第 ${attempt + 1} 次重试页面 ${pageNum}`, "color: #ff8c00; font-weight: bold;");
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+      }
+      ui.errorLogs.push(`Page ${pageNum} failed after ${maxRetries + 1} attempts`);
+      return null;
     },
     async processPage(doc, result, detailMode) {
       const trElms = doc.querySelectorAll(".work_list_main tr:not(.item_name)");
@@ -752,27 +949,41 @@
     },
     async fetchAllPages(dlurl, detailMode, updateProgressCallback) {
       const result = { count: 0, totalPrice: 0, works: [], genreCount: new Map(), makerCount: new Map(), eol: [] };
-      const firstPageText = await dataProcessor.fetchUrlAsync(dlurl + "1");
+      const concurrencyLimit = 4;
+      const firstPageText = await dataProcessor.fetchPageWithRetry(dlurl, 1);
+      if (!firstPageText) {
+        ui.errorLogs.push("无法获取第一页数据，终止任务。");
+        return result;
+      }
       const firstDoc = new DOMParser().parseFromString(firstPageText, "text/html");
       let lastPage = 1;
       const lastPageElm = firstDoc.querySelector(".page_no ul li:last-child a");
       if (lastPageElm) { lastPage = parseInt(lastPageElm.dataset.value); }
       await dataProcessor.processPage(firstDoc, result, detailMode);
-      updateProgressCallback(1, lastPage);
-      const promises = [];
-      for (let i = 2; i <= lastPage; i++) {
-        promises.push((async (pageNum) => {
-          try {
-            const pageText = await dataProcessor.fetchUrlAsync(dlurl + pageNum);
-            const doc = new DOMParser().parseFromString(pageText, "text/html");
-            await dataProcessor.processPage(doc, result, detailMode);
-          } catch (e) {
-            ui.errorLogs.push(`Error fetching page ${pageNum}: ${e}`);
-          }
-          updateProgressCallback(pageNum, lastPage);
-        })(i));
+      const remainingPages = Math.max(0, lastPage - 1);
+      const totalBatches = Math.ceil(remainingPages / concurrencyLimit) + 1;
+      let currentBatch = 1;
+      updateProgressCallback(currentBatch, totalBatches);
+      let nextPage = 2;
+      while (nextPage <= lastPage) {
+        const batchTasks = [];
+        for (let i = 0; i < concurrencyLimit && nextPage <= lastPage; i++, nextPage++) {
+          const pageNum = nextPage;
+          batchTasks.push((async () => {
+            try {
+              const pageText = await dataProcessor.fetchPageWithRetry(dlurl, pageNum);
+              if (!pageText) return;
+              const doc = new DOMParser().parseFromString(pageText, "text/html");
+              await dataProcessor.processPage(doc, result, detailMode);
+            } catch (e) {
+              ui.errorLogs.push(`Error fetching page ${pageNum}: ${e}`);
+            }
+          })());
+        }
+        await Promise.all(batchTasks);
+        currentBatch++;
+        updateProgressCallback(Math.min(currentBatch, totalBatches), totalBatches);
       }
-      await Promise.all(promises);
       return result;
     }
   };
@@ -980,12 +1191,36 @@
            overflow: hidden;
            z-index: 10000;
            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           color: #fff;
+           font-weight: bold;
+           font-size: 12px;
+        }
+        .progress-text {
+           position: absolute;
+           width: 100%;
+           height: 100%;
+           left: 0;
+           top: 0;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           text-align: center;
+           z-index: 2;
+           pointer-events: none;
+           text-shadow: 0 1px 2px rgba(0,0,0,0.3);
         }
         .inner-progress {
            height: 100%;
            width: 0%;
            background: linear-gradient(90deg, #6a11cb, #2575fc);
            transition: width 0.1s ease;
+           position: absolute;
+           top: 0;
+           left: 0;
+           z-index: 1;
         }
         .chart-container {
            background: #fff;
@@ -1127,7 +1362,7 @@
       `;
       document.head.appendChild(style);
     },
-    updateProgressBar(progress) {
+    updateProgressBar(progress, currentBatch, totalBatches) {
       let progressBar = document.getElementById("progressBar");
       if (!progressBar) {
         progressBar = document.createElement("div");
@@ -1136,10 +1371,24 @@
         const innerBar = document.createElement("div");
         innerBar.id = "innerProgressBar";
         innerBar.className = "inner-progress";
+        const progressText = document.createElement("div");
+        progressText.id = "progressText";
+        progressText.className = "progress-text";
+        progressText.textContent = "准备中...";
         progressBar.appendChild(innerBar);
+        progressBar.appendChild(progressText);
         document.body.appendChild(progressBar);
       }
       document.getElementById("innerProgressBar").style.width = progress + "%";
+      const textElem = document.getElementById("progressText");
+      if (textElem) {
+        const rounded = Math.min(100, Math.max(0, Math.round(progress)));
+        if (currentBatch && totalBatches) {
+          textElem.textContent = `批次 ${currentBatch} / ${totalBatches} (${rounded}%)`;
+        } else {
+          textElem.textContent = isNaN(rounded) ? "准备中..." : `${rounded}%`;
+        }
+      }
     },
     addCompareButton(result, exchangeRate) {
       const compareBtn = document.createElement("button");
@@ -1262,8 +1511,8 @@
       }
     }
     console.group("📄 页面抓取进度");
-    const result = await dataProcessor.fetchAllPages(dlurl, detailMode, (page, total) => {
-      ui.updateProgressBar((page / total) * 100);
+    const result = await dataProcessor.fetchAllPages(dlurl, detailMode, (currentBatch, totalBatches) => {
+      ui.updateProgressBar((currentBatch / totalBatches) * 100, currentBatch, totalBatches);
     });
     console.groupEnd();
     const excludeResponse = await modal.customPrompt("请输入要排除的最少作品数目（例如输入 3 表示排除数目小于 3 的作品类型）：", "0");
@@ -1312,74 +1561,87 @@
   const displayResults = (result, exchangeRate, filteredGenreCount, filteredMakerCount) => {
     const container = charts.createChartContainer("resultWindow", "200px", "200px", "1000px", "800px", "查询结果");
     const contentDiv = container.querySelector(".chart-content");
-    contentDiv.innerHTML = "";
-    const overviewHtml = `
-      <table>
-        <tr>
-          <th>统计项目</th>
-          <th>数量/金额</th>
-        </tr>
-        <tr>
-          <td>购买总数</td>
-          <td>${result.count} 部</td>
-        </tr>
-        <tr>
-          <td>总消费金额</td>
-          <td>${result.totalPrice} 日元 (${(result.totalPrice * exchangeRate).toFixed(2)} 人民币)</td>
-        </tr>
-      </table>
-    `;
-    contentDiv.appendChild(ui.createCollapsibleSection("统计概览", overviewHtml, false));
-    const genreHtml = `
-      <table>
-        <tr>
-          <th>类型</th>
-          <th>作品数目</th>
-        </tr>
-        ${filteredGenreCount.map(([type, entry]) => `
-          <tr>
-            <td>${type} ${entry.link ? `<a href="${entry.link}" target="_blank" style="margin-left: 5px; font-size: 12px;">跳转</a>` : ''}</td>
-            <td>${entry.count}</td>
-          </tr>
-        `).join('')}
-      </table>
-    `;
-    contentDiv.appendChild(ui.createCollapsibleSection("各类型作品数排名", genreHtml, false));
-    const makerHtml = `
-      <table>
-        <tr>
-          <th>制作组</th>
-          <th>作品数目</th>
-        </tr>
-        ${filteredMakerCount.map(([maker, entry]) => `
-          <tr>
-            <td>${maker} ${entry.link ? `<a href="${entry.link}" target="_blank" style="margin-left: 5px; font-size: 12px;">跳转</a>` : ''}</td>
-            <td>${entry.count}</td>
-          </tr>
-        `).join('')}
-      </table>
-    `;
-    contentDiv.appendChild(ui.createCollapsibleSection("各制作组作品数排名", makerHtml, false));
-    const eolHtml = result.eol.length > 0 ? `
-      <table>
-        <tr>
-          <th>购买日期</th>
-          <th>制作组</th>
-          <th>作品名称</th>
-          <th>价格</th>
-        </tr>
-        ${result.eol.map(eol => `
-          <tr>
-            <td>${eol.date}</td>
-            <td>${eol.makerName}</td>
-            <td>${eol.name}</td>
-            <td>${eol.price} 日元</td>
-          </tr>
-        `).join('')}
-      </table>
-    ` : `<p>暂无已下架作品</p>`;
-    contentDiv.appendChild(ui.createCollapsibleSection("已下架作品", eolHtml, false));
-    let timelineHtml = "";
+    while (contentDiv.firstChild) contentDiv.removeChild(contentDiv.firstChild);
+
+    const createTable = (headers, rows) => {
+      const table = document.createElement("table");
+      const headerRow = document.createElement("tr");
+      headers.forEach(text => {
+        const th = document.createElement("th");
+        th.textContent = text;
+        headerRow.appendChild(th);
+      });
+      table.appendChild(headerRow);
+      rows.forEach(cells => {
+        const tr = document.createElement("tr");
+        cells.forEach(cell => {
+          const td = document.createElement("td");
+          if (cell instanceof Node) {
+            td.appendChild(cell);
+          } else {
+            td.textContent = cell;
+          }
+          tr.appendChild(td);
+        });
+        table.appendChild(tr);
+      });
+      return table;
+    };
+
+    const overviewTable = createTable(
+      ["统计项目", "数量/金额"],
+      [
+        ["购买总数", `${result.count} 部`],
+        ["总消费金额", `${result.totalPrice} 日元 (${(result.totalPrice * exchangeRate).toFixed(2)} 人民币)`]
+      ]
+    );
+    contentDiv.appendChild(ui.createCollapsibleSection("统计概览", overviewTable, false));
+
+    const genreRows = filteredGenreCount.map(([type, entry]) => {
+      const cellContainer = document.createElement("span");
+      cellContainer.textContent = type;
+      if (entry.link) {
+        const link = document.createElement("a");
+        link.href = entry.link;
+        link.target = "_blank";
+        link.style.marginLeft = "5px";
+        link.style.fontSize = "12px";
+        link.textContent = "跳转";
+        cellContainer.appendChild(link);
+      }
+      return [cellContainer, `${entry.count}`];
+    });
+    const genreTable = createTable(["类型", "作品数目"], genreRows);
+    contentDiv.appendChild(ui.createCollapsibleSection("各类型作品数排名", genreTable, false));
+
+    const makerRows = filteredMakerCount.map(([maker, entry]) => {
+      const cellContainer = document.createElement("span");
+      cellContainer.textContent = maker;
+      if (entry.link) {
+        const link = document.createElement("a");
+        link.href = entry.link;
+        link.target = "_blank";
+        link.style.marginLeft = "5px";
+        link.style.fontSize = "12px";
+        link.textContent = "跳转";
+        cellContainer.appendChild(link);
+      }
+      return [cellContainer, `${entry.count}`];
+    });
+    const makerTable = createTable(["制作组", "作品数目"], makerRows);
+    contentDiv.appendChild(ui.createCollapsibleSection("各制作组作品数排名", makerTable, false));
+
+    if (result.eol.length > 0) {
+      const eolRows = result.eol.map(eol => [eol.date, eol.makerName, eol.name, `${eol.price} 日元`]);
+      const eolTable = createTable(["购买日期", "制作组", "作品名称", "价格"], eolRows);
+      contentDiv.appendChild(ui.createCollapsibleSection("已下架作品", eolTable, false));
+    } else {
+      const noEol = document.createElement("p");
+      noEol.textContent = "暂无已下架作品";
+      contentDiv.appendChild(ui.createCollapsibleSection("已下架作品", noEol, false));
+    }
+
+    const timelineContainer = document.createElement("div");
     const timelineGroups = {};
     result.works.forEach(work => {
       let day = new Date(work.date).toISOString().slice(0,10);
@@ -1388,35 +1650,41 @@
     });
     const sortedDates = Object.keys(timelineGroups).sort();
     sortedDates.forEach(date => {
-      let tableHtml = `<table>
-         <tr>
-            <th>作品名称</th>
-            <th>制作组</th>
-            <th>价格</th>
-         </tr>`;
-      timelineGroups[date].forEach(work => {
-         tableHtml += `<tr>
-           <td>${work.name}</td>
-           <td>${work.makerName}</td>
-           <td>${work.price} 日元</td>
-         </tr>`;
-      });
-      tableHtml += `</table>`;
-      timelineHtml += `<div><strong>${date} (${timelineGroups[date].length} 项)</strong>${tableHtml}</div>`;
+      const section = document.createElement("div");
+      const title = document.createElement("strong");
+      title.textContent = `${date} (${timelineGroups[date].length} 项)`;
+      section.appendChild(title);
+      const table = createTable(
+        ["作品名称", "制作组", "价格"],
+        timelineGroups[date].map(work => [work.name, work.makerName, `${work.price} 日元`])
+      );
+      section.appendChild(table);
+      timelineContainer.appendChild(section);
     });
-    contentDiv.appendChild(ui.createCollapsibleSection("时间轴视图", timelineHtml, true));
-    const authorHtml = `
-      <p>★ 本脚本由 凛遥crush 修改制作 ★</p>
-      <p>★ 项目地址：<a href="https://github.com/linyaocrush/DLsite-Purchase-Analyzer" target="_blank">https://github.com/linyaocrush/DLsite-Purchase-Analyzer</a></p>
-    `;
-    contentDiv.appendChild(ui.createCollapsibleSection("作者信息", authorHtml, false));
+    contentDiv.appendChild(ui.createCollapsibleSection("时间轴视图", timelineContainer, true));
+
+    const authorContainer = document.createElement("div");
+    const p1 = document.createElement("p");
+    p1.textContent = "★ 本脚本由 凛遥crush 修改制作 ★";
+    const p2 = document.createElement("p");
+    p2.textContent = "★ 项目地址：";
+    const link = document.createElement("a");
+    link.href = "https://github.com/linyaocrush/DLsite-Purchase-Analyzer";
+    link.target = "_blank";
+    link.textContent = "https://github.com/linyaocrush/DLsite-Purchase-Analyzer";
+    p2.appendChild(link);
+    authorContainer.appendChild(p1);
+    authorContainer.appendChild(p2);
+    contentDiv.appendChild(ui.createCollapsibleSection("作者信息", authorContainer, false));
+
     if (ui.errorLogs.length > 0) {
-      const errorHtml = `<pre>${ui.errorLogs.join("\n")}</pre>`;
-      contentDiv.appendChild(ui.createCollapsibleSection("错误日志", errorHtml, false));
+      const errorPre = document.createElement("pre");
+      errorPre.textContent = ui.errorLogs.join("\n");
+      contentDiv.appendChild(ui.createCollapsibleSection("错误日志", errorPre, false));
     }
   };
 
-  ui.createCollapsibleSection = (titleText, contentHtml, collapsed = false) => {
+  ui.createCollapsibleSection = (titleText, contentNode, collapsed = false) => {
     const section = document.createElement("div");
     section.className = "collapsible-section";
     const header = document.createElement("h3");
@@ -1428,7 +1696,7 @@
     header.appendChild(document.createTextNode(titleText));
     const content = document.createElement("div");
     content.className = "collapsible-content";
-    content.innerHTML = contentHtml;
+    if (contentNode) content.appendChild(contentNode);
     content.style.display = collapsed ? "none" : "block";
     header.addEventListener("click", () => {
       if (content.style.display === "none") {
