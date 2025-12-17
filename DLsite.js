@@ -87,14 +87,489 @@
     }
   };
 
+  const i18n = {
+    languages: {
+      zh: {
+        name: "简体中文",
+        currencyLabel: "人民币",
+        currencyShort: "CNY",
+        defaultRate: 0.048,
+        strings: {
+          ok: "确定",
+          cancel: "取消",
+          yes: "是",
+          no: "否",
+          save: "保存",
+          hide: "隐藏",
+          reset: "重置",
+          download: "下载结果",
+          compare: "数据对比分析",
+          applyFilters: "应用过滤",
+          redrawCharts: "根据当前过滤器重绘图表",
+          keywordPlaceholder: "作品名关键词",
+          minPrice: "最低价格",
+          maxPrice: "最高价格",
+          allMakers: "全部制作组",
+          selectTypePrompt: "请选择作品类型：",
+          quickViewPrompt: "是否开启快速查看消费金额？（仅统计金额）",
+          modifyRatePrompt: "是否需要修改汇率？",
+          modifyRateOption: "修改汇率",
+          useDefaultRateOption: "使用默认 (1日元 = 0.048人民币)",
+          enterRatePrompt: "请输入 1 日元兑换人民币的汇率（例如 0.05）：",
+          invalidRate: "输入无效，使用默认汇率",
+          usingDefaultRate: "使用默认汇率 {rate}",
+          excludePrompt: "请输入要排除的最少作品数目（例如输入 3 表示排除数目小于 3 的作品类型）：",
+          excludeInvalid: "无效的输入，使用默认值 0（不过滤）",
+          excludeEmpty: "未输入数值，使用默认值 0（不过滤）",
+          showChartPrompt: "是否显示图表数据展示？",
+          show: "显示",
+          hideOption: "不显示",
+          notDlsite: "当前页面未检测到 DLsite 购买记录，是否跳转到正确的购买历史页面？",
+          switchToDlsite: "请切换到 DLsite 购买历史页面后再运行此脚本。",
+          jumpConfirmYes: "跳转",
+          jumpConfirmNo: "取消",
+          pageTitleLog: "✦ DLsite购买历史统计 ✦",
+          periodTitle: "选择时间段及对比方面",
+          period1: "时间段 1:",
+          period2: "时间段 2:",
+          startDate: "开始日期:",
+          endDate: "结束日期:",
+          aspectTitle: "请选择对比的方面：",
+          aspectPrefType: "不同类型作品偏好对比",
+          aspectPrefMaker: "不同制作组偏好对比",
+          aspectMakerOverall: "不同制作组对比",
+          aspectMakerType: "制作组作品类型对比",
+          period1Invalid: "时间段1的开始日期不能晚于结束日期。",
+          period2Invalid: "时间段2的开始日期不能晚于结束日期。",
+          analysisExists: "该分析已存在。",
+          downloadFormatPrompt: "请选择要下载的文件格式：",
+          downloadMd: "Markdown (.md)",
+          downloadCsv: "CSV (.csv)",
+          downloadJson: "JSON (.json)",
+          downloadAll: "全部下载",
+          chartGenreTitle: "作品类型统计",
+          chartMakerTitle: "制作组统计",
+          chartTimelineTitle: "每日购买数量",
+          chartCumulativeTitle: "累计消费金额",
+          chartSwitchPie: "切换为饼状图",
+          chartSwitchBar: "切换为柱状图",
+          workCount: "作品数目",
+          workTypeLabel: "类型",
+          workMakerLabel: "制作组",
+          workNameLabel: "作品名称",
+          purchaseDate: "购买日期",
+          priceYen: "价格: {amount} 日元",
+          worksCount: "作品数: {count}",
+          dateLabel: "日期: {date}",
+          purchaseCount: "购买数量: {count}",
+          purchaseCountLabel: "购买数量",
+          totalDay: "当天总价：{amount} 日元",
+          comparisonLabel: "标签：{label}\n{dataset}: {value}",
+          makerOverallSummary: "时间段 1：\n  作品数：{count1}\n  总价：{price1} 日元 ({converted1} {currency})\n\n时间段 2：\n  作品数：{count2}\n  总价：{price2} 日元 ({converted2} {currency})",
+          makerTypeTitle: "制作组作品类型对比（前 5 制作组）\n\n",
+          timelineItem: "  {genre}: 时间段1 {v1} / 时间段2 {v2}\n",
+          preparation: "准备中...",
+          batchProgress: "批次 {current} / {total} ({percent}%)",
+          overview: "统计概览",
+          genreRanking: "各类型作品数排名",
+          makerRanking: "各制作组作品数排名",
+          eolTitle: "已下架作品",
+          timeline: "时间轴视图",
+          authorInfo: "作者信息",
+          authorCredit: "★ 本脚本由 凛遥crush 修改制作 ★",
+          projectLabel: "★ 项目地址：",
+          purchaseTotal: "购买总数",
+          totalSpent: "总消费金额",
+          statItem: "统计项目",
+          valueLabel: "数值",
+          jumpText: "跳转",
+          noGenreData: "暂无符合条件的类型数据",
+          noMakerData: "暂无符合条件的制作组数据",
+          noEol: "暂无已下架作品",
+          noData: "暂无数据",
+          filterTitle: "查询结果",
+          exportAll: "全部下载",
+          minWorksCount: "作品数目",
+          currencyConverted: "{yen} 日元 ({converted} {currency})",
+          yenOnly: "{yen} 日元",
+          downloadTitle: "下载结果",
+          compareTitle: "数据对比分析",
+          resetTitle: "重置",
+          errorLogTitle: "错误日志",
+          retryPage: "第 {attempt} 次重试页面 {page}",
+          firstPageFail: "无法获取第一页数据，终止任务。",
+          fetchDetailLog: "获取作品详情: {url}",
+          progressGroup: "页面抓取进度",
+          makerOptionUnknown: "未知",
+          showCharts: "显示",
+          hideCharts: "不显示",
+          selectLanguage: "语言/Language/言語",
+          languageChanged: "语言已切换为 {lang}，界面正在更新...",
+          rateLabel: "汇率",
+          currencyEditLabel: "编辑汇率",
+          ratePromptUsd: "请输入 1 日元兑换美元的汇率（例如 0.0064）：",
+          modifyRateNotice: "使用默认汇率 {rate}",
+          dragHandleLabel: "拖动以移动窗口",
+          typeAllWorks: "全部作品",
+          doujinAll: "同人：所有",
+          doujinAllAges: "同人：全年龄",
+          doujinMale: "同人：男性向",
+          doujinFemale: "同人：女性向",
+          commercialAll: "商业游戏：所有",
+          commercialAllAges: "商业游戏：全年龄",
+          commercialMale: "商业游戏：男性向",
+          mangaAll: "漫画：所有",
+          mangaAllAges: "漫画：全年龄",
+          mangaMale: "漫画：男性向",
+          mangaFemale: "漫画：女性向"
+        }
+      },
+      en: {
+        name: "English",
+        currencyLabel: "USD",
+        currencyShort: "USD",
+        defaultRate: 0.0064,
+        strings: {
+          ok: "OK",
+          cancel: "Cancel",
+          yes: "Yes",
+          no: "No",
+          save: "Save",
+          hide: "Hide",
+          reset: "Reset",
+          download: "Download results",
+          compare: "Compare data",
+          applyFilters: "Apply filters",
+          redrawCharts: "Redraw charts with filters",
+          keywordPlaceholder: "Title keyword",
+          minPrice: "Min price",
+          maxPrice: "Max price",
+          allMakers: "All makers",
+          selectTypePrompt: "Choose a work type:",
+          quickViewPrompt: "Enable quick spend preview? (only totals)",
+          modifyRatePrompt: "Do you want to edit the rate?",
+          modifyRateOption: "Edit rate",
+          useDefaultRateOption: "Use default (1 JPY = 0.0064 USD)",
+          enterRatePrompt: "Enter the USD per JPY rate (e.g. 0.0064):",
+          invalidRate: "Invalid input, using default rate",
+          usingDefaultRate: "Using default rate {rate}",
+          excludePrompt: "Enter minimum works to keep (e.g. 3 removes items under 3):",
+          excludeInvalid: "Invalid input, using default 0 (no filter)",
+          excludeEmpty: "No input, using default 0 (no filter)",
+          showChartPrompt: "Show chart visualizations?",
+          show: "Show",
+          hideOption: "Do not show",
+          notDlsite: "No DLsite purchase history detected. Go to the correct page?",
+          switchToDlsite: "Please open the DLsite purchase history page before running this script.",
+          jumpConfirmYes: "Go",
+          jumpConfirmNo: "Stay",
+          pageTitleLog: "✦ DLsite Purchase Analyzer ✦",
+          periodTitle: "Select periods and aspects",
+          period1: "Period 1:",
+          period2: "Period 2:",
+          startDate: "Start date:",
+          endDate: "End date:",
+          aspectTitle: "Pick comparison aspects:",
+          aspectPrefType: "Type preference",
+          aspectPrefMaker: "Maker preference",
+          aspectMakerOverall: "Maker overall",
+          aspectMakerType: "Maker vs. type",
+          period1Invalid: "Start date of period 1 cannot be after the end date.",
+          period2Invalid: "Start date of period 2 cannot be after the end date.",
+          analysisExists: "This analysis already exists.",
+          downloadFormatPrompt: "Choose a download format:",
+          downloadMd: "Markdown (.md)",
+          downloadCsv: "CSV (.csv)",
+          downloadJson: "JSON (.json)",
+          downloadAll: "Download all",
+          chartGenreTitle: "Works by type",
+          chartMakerTitle: "Works by maker",
+          chartTimelineTitle: "Purchases per day",
+          chartCumulativeTitle: "Cumulative spend",
+          chartSwitchPie: "Switch to pie",
+          chartSwitchBar: "Switch to bar",
+          workCount: "Works",
+          workTypeLabel: "Type",
+          workMakerLabel: "Maker",
+          workNameLabel: "Title",
+          purchaseDate: "Purchase date",
+          priceYen: "Price: {amount} JPY",
+          worksCount: "Count: {count}",
+          dateLabel: "Date: {date}",
+          purchaseCount: "Purchases: {count}",
+          purchaseCountLabel: "Purchases",
+          totalDay: "Daily total: {amount} JPY",
+          comparisonLabel: "Label: {label}\n{dataset}: {value}",
+          makerOverallSummary: "Period 1:\n  Works: {count1}\n  Total: {price1} JPY ({converted1} {currency})\n\nPeriod 2:\n  Works: {count2}\n  Total: {price2} JPY ({converted2} {currency})",
+          makerTypeTitle: "Top 5 makers by type\n\n",
+          timelineItem: "  {genre}: Period1 {v1} / Period2 {v2}\n",
+          preparation: "Preparing...",
+          batchProgress: "Batch {current} / {total} ({percent}%)",
+          overview: "Overview",
+          genreRanking: "Type ranking",
+          makerRanking: "Maker ranking",
+          eolTitle: "Unavailable works",
+          timeline: "Timeline",
+          authorInfo: "Credits",
+          authorCredit: "★ Script modified by 凛遥crush ★",
+          projectLabel: "★ Project: ",
+          purchaseTotal: "Total purchases",
+          totalSpent: "Total spend",
+          statItem: "Item",
+          valueLabel: "Value",
+          jumpText: "Open",
+          noGenreData: "No matching type data",
+          noMakerData: "No matching maker data",
+          noEol: "No unavailable works",
+          noData: "No data",
+          filterTitle: "Results",
+          exportAll: "Download all",
+          minWorksCount: "Works",
+          currencyConverted: "{yen} JPY ({converted} {currency})",
+          yenOnly: "{yen} JPY",
+          downloadTitle: "Download results",
+          compareTitle: "Compare data",
+          resetTitle: "Reset",
+          errorLogTitle: "Errors",
+          retryPage: "Retry {attempt} for page {page}",
+          firstPageFail: "Failed to fetch the first page, stopping.",
+          fetchDetailLog: "Fetching work detail: {url}",
+          progressGroup: "Page fetch progress",
+          makerOptionUnknown: "Unknown",
+          showCharts: "Show",
+          hideCharts: "Hide",
+          selectLanguage: "语言/Language/言語",
+          languageChanged: "Language switched to {lang}. Updating UI...",
+          rateLabel: "Exchange rate",
+          currencyEditLabel: "Edit rate",
+          ratePromptUsd: "Enter the USD per JPY rate (e.g. 0.0064):",
+          modifyRateNotice: "Using default rate {rate}",
+          dragHandleLabel: "Drag to move window",
+          typeAllWorks: "All works",
+          doujinAll: "Doujin: all",
+          doujinAllAges: "Doujin: all ages",
+          doujinMale: "Doujin: male oriented",
+          doujinFemale: "Doujin: female oriented",
+          commercialAll: "Commercial games: all",
+          commercialAllAges: "Commercial games: all ages",
+          commercialMale: "Commercial games: male oriented",
+          mangaAll: "Manga: all",
+          mangaAllAges: "Manga: all ages",
+          mangaMale: "Manga: male oriented",
+          mangaFemale: "Manga: female oriented"
+        }
+      },
+      ja: {
+        name: "日本語",
+        currencyLabel: "円",
+        currencyShort: "JPY",
+        defaultRate: 1,
+        strings: {
+          ok: "OK",
+          cancel: "キャンセル",
+          yes: "はい",
+          no: "いいえ",
+          save: "保存",
+          hide: "非表示",
+          reset: "リセット",
+          download: "結果をダウンロード",
+          compare: "データ比較",
+          applyFilters: "フィルター適用",
+          redrawCharts: "フィルターでグラフ再描画",
+          keywordPlaceholder: "作品名キーワード",
+          minPrice: "最低価格",
+          maxPrice: "最高価格",
+          allMakers: "すべてのサークル",
+          selectTypePrompt: "作品タイプを選択してください：",
+          quickViewPrompt: "金額のみのクイック確認を有効にしますか？",
+          modifyRatePrompt: "為替レートを変更しますか？",
+          modifyRateOption: "レートを変更",
+          useDefaultRateOption: "デフォルトを使用 (変換なし)",
+          enterRatePrompt: "円からの変換は行いません。",
+          invalidRate: "入力が無効です。デフォルトを使用します。",
+          usingDefaultRate: "デフォルトレート {rate} を使用",
+          excludePrompt: "最低作品数を入力してください（例: 3 なら 3 未満を除外）：",
+          excludeInvalid: "無効な入力です。0（フィルターなし）を使用します。",
+          excludeEmpty: "未入力です。0（フィルターなし）を使用します。",
+          showChartPrompt: "グラフを表示しますか？",
+          show: "表示",
+          hideOption: "表示しない",
+          notDlsite: "DLsite の購入履歴が見つかりません。正しいページに移動しますか？",
+          switchToDlsite: "購入履歴ページを開いてから実行してください。",
+          jumpConfirmYes: "移動",
+          jumpConfirmNo: "とどまる",
+          pageTitleLog: "✦ DLsite購入履歴分析 ✦",
+          periodTitle: "期間と比較内容の選択",
+          period1: "期間1:",
+          period2: "期間2:",
+          startDate: "開始日:",
+          endDate: "終了日:",
+          aspectTitle: "比較内容を選択してください：",
+          aspectPrefType: "タイプ別嗜好",
+          aspectPrefMaker: "サークル別嗜好",
+          aspectMakerOverall: "サークル比較",
+          aspectMakerType: "サークルとタイプ比較",
+          period1Invalid: "期間1の開始日は終了日より後にできません。",
+          period2Invalid: "期间2の開始日は終了日より後にできません。",
+          analysisExists: "この分析は既に存在します。",
+          downloadFormatPrompt: "ダウンロード形式を選んでください：",
+          downloadMd: "Markdown (.md)",
+          downloadCsv: "CSV (.csv)",
+          downloadJson: "JSON (.json)",
+          downloadAll: "すべてダウンロード",
+          chartGenreTitle: "タイプ別統計",
+          chartMakerTitle: "サークル統計",
+          chartTimelineTitle: "日別購入数",
+          chartCumulativeTitle: "累計支出",
+          chartSwitchPie: "円グラフに切替",
+          chartSwitchBar: "棒グラフに切替",
+          workCount: "作品数",
+          workTypeLabel: "タイプ",
+          workMakerLabel: "サークル",
+          workNameLabel: "作品名",
+          purchaseDate: "購入日",
+          priceYen: "価格: {amount} 円",
+          worksCount: "作品数: {count}",
+          dateLabel: "日付: {date}",
+          purchaseCount: "購入数: {count}",
+          purchaseCountLabel: "購入数",
+          totalDay: "当日の合計: {amount} 円",
+          comparisonLabel: "ラベル: {label}\n{dataset}: {value}",
+          makerOverallSummary: "期間1:\n  作品数: {count1}\n  合計: {price1} 円\n\n期間2:\n  作品数: {count2}\n  合計: {price2} 円",
+          makerTypeTitle: "上位5サークルのタイプ比較\n\n",
+          timelineItem: "  {genre}: 期間1 {v1} / 期間2 {v2}\n",
+          preparation: "準備中...",
+          batchProgress: "バッチ {current} / {total} ({percent}%)",
+          overview: "概要",
+          genreRanking: "タイプ別ランキング",
+          makerRanking: "サークル別ランキング",
+          eolTitle: "販売終了作品",
+          timeline: "タイムライン",
+          authorInfo: "作者情報",
+          authorCredit: "★ 本スクリプトは 凛遥crush が改修 ★",
+          projectLabel: "★ プロジェクト：",
+          purchaseTotal: "購入総数",
+          totalSpent: "総支出",
+          statItem: "項目",
+          valueLabel: "値",
+          jumpText: "開く",
+          noGenreData: "該当するタイプデータがありません",
+          noMakerData: "該当するサークルデータがありません",
+          noEol: "販売終了作品なし",
+          noData: "データなし",
+          filterTitle: "結果",
+          exportAll: "すべてダウンロード",
+          minWorksCount: "作品数",
+          currencyConverted: "{yen} 円",
+          yenOnly: "{yen} 円",
+          downloadTitle: "結果をダウンロード",
+          compareTitle: "データ比較",
+          resetTitle: "リセット",
+          errorLogTitle: "エラーログ",
+          retryPage: "{page} ページを {attempt} 回目再試行", 
+          firstPageFail: "最初のページを取得できません。処理を終了します。",
+          fetchDetailLog: "作品詳細を取得: {url}",
+          progressGroup: "ページ取得の進行状況",
+          makerOptionUnknown: "不明",
+          showCharts: "表示",
+          hideCharts: "表示しない",
+          selectLanguage: "语言/Language/言語",
+          languageChanged: "言語を {lang} に変更しました。更新中...",
+          rateLabel: "為替レート",
+          currencyEditLabel: "レートを編集",
+          ratePromptUsd: "円はそのまま表示されます。",
+          modifyRateNotice: "デフォルトレート {rate} を使用",
+          dragHandleLabel: "ドラッグして移動",
+          typeAllWorks: "すべての作品",
+          doujinAll: "同人：すべて",
+          doujinAllAges: "同人：全年齢",
+          doujinMale: "同人：男性向け",
+          doujinFemale: "同人：女性向け",
+          commercialAll: "商業ゲーム：すべて",
+          commercialAllAges: "商業ゲーム：全年齢",
+          commercialMale: "商業ゲーム：男性向け",
+          mangaAll: "漫画：すべて",
+          mangaAllAges: "漫画：全年齢",
+          mangaMale: "漫画：男性向け",
+          mangaFemale: "漫画：女性向け"
+        }
+      }
+    },
+    current: null,
+    init() {
+      const stored = localStorage.getItem("dlsiteAnalyzerLang");
+      if (stored && this.languages[stored]) {
+        this.current = stored;
+      } else {
+        const nav = (navigator.language || "zh").toLowerCase();
+        if (nav.startsWith("ja")) this.current = "ja";
+        else if (nav.startsWith("en")) this.current = "en";
+        else this.current = "zh";
+        localStorage.setItem("dlsiteAnalyzerLang", this.current);
+      }
+    },
+    setLanguage(lang) {
+      if (!this.languages[lang]) return;
+      this.current = lang;
+      localStorage.setItem("dlsiteAnalyzerLang", lang);
+    },
+    t(key, vars = {}) {
+      const langPack = this.languages[this.current] || this.languages.zh;
+      let template = langPack.strings[key] || key;
+      Object.entries(vars).forEach(([k, v]) => {
+        template = template.replace(new RegExp(`{${k}}`, "g"), v);
+      });
+      return template;
+    },
+    getCurrencyConfig() {
+      const langPack = this.languages[this.current] || this.languages.zh;
+      return {
+        label: langPack.currencyLabel,
+        short: langPack.currencyShort,
+        rate: langPack.defaultRate
+      };
+    }
+  };
+
+  i18n.init();
+
+  const appState = {
+    result: null,
+    filteredGenreCount: null,
+    filteredMakerCount: null,
+    exchangeRate: null,
+    excludeThreshold: 0,
+    showCharts: false,
+    detailMode: true,
+    currencyLang: i18n.current,
+    customRates: {}
+  };
+
+  const currencyHelper = {
+    format(amountJPY, exchangeRate) {
+      const config = i18n.getCurrencyConfig();
+      const rate = typeof exchangeRate === "number" ? exchangeRate : config.rate;
+      if (!rate || rate === 1 || i18n.current === "ja") {
+        return i18n.t("yenOnly", { yen: amountJPY });
+      }
+      const converted = (amountJPY * rate).toFixed(2);
+      return i18n.t("currencyConverted", { yen: amountJPY, converted, currency: config.label });
+    }
+  };
+
   const modal = {
     createModal(maxWidth = "500px") {
       const overlay = document.createElement("div");
       overlay.className = "modal-overlay";
+      overlay.setAttribute("role", "presentation");
+      overlay.tabIndex = -1;
       utils.fadeIn(overlay);
       const modalContainer = document.createElement("div");
       modalContainer.className = "modal-container";
       modalContainer.style.maxWidth = maxWidth;
+      modalContainer.setAttribute("role", "dialog");
+      modalContainer.setAttribute("aria-modal", "true");
+      modalContainer.tabIndex = -1;
       overlay.appendChild(modalContainer);
       document.body.appendChild(overlay);
       utils.animateModalIn(modalContainer);
@@ -108,6 +583,41 @@
         });
       });
     },
+    setupAccessibility(overlay, modalContainer, onClose) {
+      const focusSelectors = "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])";
+      const getFocusable = () => Array.from(overlay.querySelectorAll(focusSelectors)).filter(el => !el.disabled && el.offsetParent !== null);
+      const handleKeydown = (e) => {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          onClose();
+        } else if (e.key === "Tab") {
+          const focusables = getFocusable();
+          if (focusables.length === 0) return;
+          const first = focusables[0];
+          const last = focusables[focusables.length - 1];
+          if (e.shiftKey) {
+            if (document.activeElement === first || !overlay.contains(document.activeElement)) {
+              e.preventDefault();
+              last.focus();
+            }
+          } else {
+            if (document.activeElement === last || !overlay.contains(document.activeElement)) {
+              e.preventDefault();
+              first.focus();
+            }
+          }
+        }
+      };
+      overlay.addEventListener("keydown", handleKeydown);
+      setTimeout(() => {
+        const focusables = getFocusable();
+        if (focusables.length > 0) {
+          focusables[0].focus();
+        } else {
+          modalContainer.focus();
+        }
+      }, 0);
+    },
     customAlert(message) {
       return new Promise(resolve => {
         const { overlay, modalContainer } = modal.createModal("600px");
@@ -118,11 +628,40 @@
         msgDiv.textContent = message;
         modalContainer.appendChild(msgDiv);
         const btn = document.createElement("button");
-        btn.textContent = "确定";
+        btn.textContent = i18n.t("ok");
         btn.className = "btn";
+        btn.setAttribute("aria-label", i18n.t("ok"));
         btn.addEventListener("click", () => {
           modal.closeModal(overlay, modalContainer, resolve);
         });
+        modal.setupAccessibility(overlay, modalContainer, () => modal.closeModal(overlay, modalContainer, resolve));
+        modalContainer.appendChild(btn);
+      });
+    },
+    customAlertWithExtraInfo(message, extraInfo) {
+      return new Promise(resolve => {
+        const { overlay, modalContainer } = modal.createModal("600px");
+        const msgDiv = document.createElement("pre");
+        msgDiv.style.textAlign = "left";
+        msgDiv.style.maxHeight = "400px";
+        msgDiv.style.overflowY = "auto";
+        msgDiv.textContent = message;
+        modalContainer.appendChild(msgDiv);
+        if (extraInfo) {
+          const extra = document.createElement("div");
+          extra.textContent = extraInfo;
+          extra.style.marginTop = "10px";
+          extra.setAttribute("aria-label", extraInfo);
+          modalContainer.appendChild(extra);
+        }
+        const btn = document.createElement("button");
+        btn.textContent = i18n.t("ok");
+        btn.className = "btn";
+        btn.setAttribute("aria-label", i18n.t("ok"));
+        btn.addEventListener("click", () => {
+          modal.closeModal(overlay, modalContainer, resolve);
+        });
+        modal.setupAccessibility(overlay, modalContainer, () => modal.closeModal(overlay, modalContainer, resolve));
         modalContainer.appendChild(btn);
       });
     },
@@ -138,15 +677,18 @@
         input.style.width = "80%";
         input.style.marginTop = "15px";
         input.style.padding = "5px";
+        input.setAttribute("aria-label", message);
         modalContainer.appendChild(input);
         const btnContainer = document.createElement("div");
         btnContainer.style.marginTop = "15px";
         const okBtn = document.createElement("button");
-        okBtn.textContent = "确定";
+        okBtn.textContent = i18n.t("ok");
         okBtn.className = "btn";
+        okBtn.setAttribute("aria-label", i18n.t("ok"));
         const cancelBtn = document.createElement("button");
-        cancelBtn.textContent = "取消";
+        cancelBtn.textContent = i18n.t("cancel");
         cancelBtn.className = "btn";
+        cancelBtn.setAttribute("aria-label", i18n.t("cancel"));
         okBtn.addEventListener("click", () => {
           modal.closeModal(overlay, modalContainer, () => { resolve(input.value); });
         });
@@ -156,6 +698,7 @@
         btnContainer.appendChild(okBtn);
         btnContainer.appendChild(cancelBtn);
         modalContainer.appendChild(btnContainer);
+        modal.setupAccessibility(overlay, modalContainer, () => modal.closeModal(overlay, modalContainer, () => resolve(null)));
       });
     },
     customConfirm(message) {
@@ -167,11 +710,13 @@
         const btnContainer = document.createElement("div");
         btnContainer.style.marginTop = "15px";
         const okBtn = document.createElement("button");
-        okBtn.textContent = "确定";
+        okBtn.textContent = i18n.t("ok");
         okBtn.className = "btn";
+        okBtn.setAttribute("aria-label", i18n.t("ok"));
         const cancelBtn = document.createElement("button");
-        cancelBtn.textContent = "取消";
+        cancelBtn.textContent = i18n.t("cancel");
         cancelBtn.className = "btn";
+        cancelBtn.setAttribute("aria-label", i18n.t("cancel"));
         okBtn.addEventListener("click", () => {
           modal.closeModal(overlay, modalContainer, () => { resolve(true); });
         });
@@ -181,6 +726,7 @@
         btnContainer.appendChild(okBtn);
         btnContainer.appendChild(cancelBtn);
         modalContainer.appendChild(btnContainer);
+        modal.setupAccessibility(overlay, modalContainer, () => modal.closeModal(overlay, modalContainer, () => resolve(false)));
       });
     },
     customChoice(message, options) {
@@ -194,22 +740,24 @@
           const btn = document.createElement("button");
           btn.textContent = opt.label;
           btn.className = "btn";
+          btn.setAttribute("aria-label", opt.label);
           btn.addEventListener("click", () => { modal.closeModal(overlay, modalContainer, () => { resolve(opt.value); }); });
           btnContainer.appendChild(btn);
         });
         modalContainer.appendChild(btnContainer);
+        modal.setupAccessibility(overlay, modalContainer, () => modal.closeModal(overlay, modalContainer, () => resolve(null)));
       });
     },
     customSelectPeriods(availableDates) {
       return new Promise(resolve => {
         const { overlay, modalContainer } = modal.createModal("500px");
         const title = document.createElement("h2");
-        title.textContent = "选择时间段及对比方面";
+        title.textContent = i18n.t("periodTitle");
         modalContainer.appendChild(title);
         const period1Container = document.createElement("div");
         period1Container.style.margin = "10px 0";
         const period1Label = document.createElement("div");
-        period1Label.textContent = "时间段 1:";
+        period1Label.textContent = i18n.t("period1");
         period1Container.appendChild(period1Label);
         const period1StartSelect = document.createElement("select");
         availableDates.forEach(date => {
@@ -218,7 +766,7 @@
           option.textContent = date;
           period1StartSelect.appendChild(option);
         });
-        period1Container.appendChild(document.createTextNode("开始日期: "));
+        period1Container.appendChild(document.createTextNode(i18n.t("startDate") + " "));
         period1Container.appendChild(period1StartSelect);
         const period1EndSelect = document.createElement("select");
         availableDates.forEach(date => {
@@ -227,13 +775,13 @@
           option.textContent = date;
           period1EndSelect.appendChild(option);
         });
-        period1Container.appendChild(document.createTextNode(" 结束日期: "));
+        period1Container.appendChild(document.createTextNode(" " + i18n.t("endDate") + " "));
         period1Container.appendChild(period1EndSelect);
         modalContainer.appendChild(period1Container);
         const period2Container = document.createElement("div");
         period2Container.style.margin = "10px 0";
         const period2Label = document.createElement("div");
-        period2Label.textContent = "时间段 2:";
+        period2Label.textContent = i18n.t("period2");
         period2Container.appendChild(period2Label);
         const period2StartSelect = document.createElement("select");
         availableDates.forEach(date => {
@@ -242,7 +790,7 @@
           option.textContent = date;
           period2StartSelect.appendChild(option);
         });
-        period2Container.appendChild(document.createTextNode("开始日期: "));
+        period2Container.appendChild(document.createTextNode(i18n.t("startDate") + " "));
         period2Container.appendChild(period2StartSelect);
         const period2EndSelect = document.createElement("select");
         availableDates.forEach(date => {
@@ -251,19 +799,19 @@
           option.textContent = date;
           period2EndSelect.appendChild(option);
         });
-        period2Container.appendChild(document.createTextNode(" 结束日期: "));
+        period2Container.appendChild(document.createTextNode(" " + i18n.t("endDate") + " "));
         period2Container.appendChild(period2EndSelect);
         modalContainer.appendChild(period2Container);
         const aspectsContainer = document.createElement("div");
         aspectsContainer.style.margin = "10px 0";
         const aspectsTitle = document.createElement("div");
-        aspectsTitle.textContent = "请选择对比的方面：";
+        aspectsTitle.textContent = i18n.t("aspectTitle");
         aspectsContainer.appendChild(aspectsTitle);
         const aspects = [
-          { label: "不同类型作品偏好对比", value: "prefType" },
-          { label: "不同制作组偏好对比", value: "prefMaker" },
-          { label: "不同制作组对比", value: "makerOverall" },
-          { label: "制作组作品类型对比", value: "makerType" }
+          { label: i18n.t("aspectPrefType"), value: "prefType" },
+          { label: i18n.t("aspectPrefMaker"), value: "prefMaker" },
+          { label: i18n.t("aspectMakerOverall"), value: "makerOverall" },
+          { label: i18n.t("aspectMakerType"), value: "makerType" }
         ];
         const checkboxes = {};
         aspects.forEach(item => {
@@ -275,6 +823,7 @@
           const label = document.createElement("label");
           label.htmlFor = checkbox.id;
           label.textContent = item.label;
+          label.setAttribute("aria-label", item.label);
           aspectsContainer.appendChild(checkbox);
           aspectsContainer.appendChild(label);
           aspectsContainer.appendChild(document.createElement("br"));
@@ -283,10 +832,10 @@
         const btnContainer = document.createElement("div");
         btnContainer.style.marginTop = "15px";
         const okBtn = document.createElement("button");
-        okBtn.textContent = "确定";
+        okBtn.textContent = i18n.t("ok");
         okBtn.className = "btn";
         const cancelBtn = document.createElement("button");
-        cancelBtn.textContent = "取消";
+        cancelBtn.textContent = i18n.t("cancel");
         cancelBtn.className = "btn";
         btnContainer.appendChild(okBtn);
         btnContainer.appendChild(cancelBtn);
@@ -297,11 +846,11 @@
           const p2Start = period2StartSelect.value;
           const p2End = period2EndSelect.value;
           if(new Date(p1Start) > new Date(p1End)){
-            modal.customAlert("时间段1的开始日期不能晚于结束日期。");
+            modal.customAlert(i18n.t("period1Invalid"));
             return;
           }
           if(new Date(p2Start) > new Date(p2End)){
-            modal.customAlert("时间段2的开始日期不能晚于结束日期。");
+            modal.customAlert(i18n.t("period2Invalid"));
             return;
           }
           const selectedAspects = {
@@ -321,6 +870,7 @@
         cancelBtn.addEventListener("click", () => {
           modal.closeModal(overlay, modalContainer, () => { resolve(null); });
         });
+        modal.setupAccessibility(overlay, modalContainer, () => modal.closeModal(overlay, modalContainer, () => resolve(null)));
       });
     }
   };
@@ -348,14 +898,17 @@
         const dragButton = document.createElement("div");
         dragButton.className = "drag-button";
         dragButton.textContent = "≡";
+        dragButton.setAttribute("role", "button");
+        dragButton.setAttribute("aria-label", i18n.t("dragHandleLabel"));
         container.appendChild(dragButton);
         const saveButton = document.createElement("button");
-        saveButton.textContent = "保存";
+        saveButton.textContent = i18n.t("save");
         saveButton.className = "btn";
         saveButton.style.position = "absolute";
         saveButton.style.top = "5px";
         saveButton.style.right = "5px";
         saveButton.style.zIndex = "101";
+        saveButton.setAttribute("aria-label", i18n.t("save"));
         saveButton.addEventListener("click", () => {
           const canvas = container.querySelector("canvas");
           if(canvas){
@@ -365,12 +918,13 @@
         });
         container.appendChild(saveButton);
         const hideButton = document.createElement("button");
-        hideButton.textContent = "隐藏";
+        hideButton.textContent = i18n.t("hide");
         hideButton.className = "btn";
         hideButton.style.position = "absolute";
         hideButton.style.top = "5px";
         hideButton.style.right = "60px";
         hideButton.style.zIndex = "101";
+        hideButton.setAttribute("aria-label", i18n.t("hide"));
         hideButton.addEventListener("click", () => {
           container.style.display = "none";
           let hiddenContainer = document.getElementById("hiddenChartsContainer");
@@ -388,6 +942,7 @@
           restoreButton.className = "btn";
           restoreButton.style.display = "block";
           restoreButton.style.marginBottom = "5px";
+          restoreButton.setAttribute("aria-label", container.dataset.title || container.id);
           restoreButton.addEventListener("click", () => {
             container.style.display = "block";
             hiddenContainer.removeChild(restoreButton);
@@ -408,19 +963,20 @@
     },
     drawGenreChart(filteredGenreCount, works, currentType) {
       currentType = currentType || "bar";
-      const container = charts.createChartContainer("chartContainer1", "100px", "100px", "500px", "400px", "作品类型统计");
+      const container = charts.createChartContainer("chartContainer1", "100px", "100px", "500px", "400px", i18n.t("chartGenreTitle"));
       const contentDiv = container.querySelector(".chart-content");
       while (contentDiv.firstChild) contentDiv.removeChild(contentDiv.firstChild);
       const header = document.createElement("h3");
       header.style.textAlign = "center";
       header.style.margin = "0";
-      header.textContent = "作品类型统计 ";
+      header.textContent = i18n.t("chartGenreTitle") + " ";
       const toggleBtn = document.createElement("button");
       toggleBtn.id = "toggleGenreChartBtn";
       toggleBtn.className = "btn";
       toggleBtn.style.marginLeft = "10px";
       toggleBtn.style.fontSize = "12px";
-      toggleBtn.textContent = `切换为${currentType === 'bar' ? '饼状图' : '柱状图'}`;
+      toggleBtn.textContent = currentType === 'bar' ? i18n.t("chartSwitchPie") : i18n.t("chartSwitchBar");
+      toggleBtn.setAttribute("aria-label", toggleBtn.textContent);
       header.appendChild(toggleBtn);
       contentDiv.appendChild(header);
       const canvas = document.createElement("canvas");
@@ -444,9 +1000,9 @@
           const index = elements[0].index;
           const genre = filteredGenreCount[index][0];
           const worksWithGenre = works.filter(work => work.genre === genre || (work.mainGenre && work.mainGenre.includes(genre)));
-          let content = `类型: ${genre}\n作品数: ${worksWithGenre.length}\n\n`;
+          let content = `${i18n.t("workTypeLabel")}: ${genre}\n${i18n.t("worksCount", { count: worksWithGenre.length })}\n\n`;
           worksWithGenre.forEach(work => {
-            content += `作品名称: ${work.name}\n制作组: ${work.makerName}\n购买日期: ${work.date}\n价格: ${work.price} 日元\n\n`;
+            content += `${i18n.t("workNameLabel")}: ${work.name}\n${i18n.t("workMakerLabel")}: ${work.makerName}\n${i18n.t("purchaseDate")}: ${work.date}\n${i18n.t("priceYen", { amount: work.price })}\n\n`;
           });
           modal.customAlert(content);
         }
@@ -456,7 +1012,7 @@
         data: {
           labels: filteredGenreCount.map(item => item[0]),
           datasets: [{
-            label: "作品数目",
+            label: i18n.t("workCount"),
             data: filteredGenreCount.map(item => item[1].count),
             backgroundColor: backgroundColors,
             borderColor: borderColors,
@@ -477,19 +1033,20 @@
     },
     drawMakerChart(filteredMakerCount, works, currentType) {
       currentType = currentType || "bar";
-      const container = charts.createChartContainer("chartContainer2", "100px", "650px", "500px", "400px", "制作组统计");
+      const container = charts.createChartContainer("chartContainer2", "100px", "650px", "500px", "400px", i18n.t("chartMakerTitle"));
       const contentDiv = container.querySelector(".chart-content");
       while (contentDiv.firstChild) contentDiv.removeChild(contentDiv.firstChild);
       const header = document.createElement("h3");
       header.style.textAlign = "center";
       header.style.margin = "0";
-      header.textContent = "制作组统计 ";
+      header.textContent = i18n.t("chartMakerTitle") + " ";
       const toggleBtn = document.createElement("button");
       toggleBtn.id = "toggleMakerChartBtn";
       toggleBtn.className = "btn";
       toggleBtn.style.marginLeft = "10px";
       toggleBtn.style.fontSize = "12px";
-      toggleBtn.textContent = `切换为${currentType === 'bar' ? '饼状图' : '柱状图'}`;
+      toggleBtn.textContent = currentType === 'bar' ? i18n.t("chartSwitchPie") : i18n.t("chartSwitchBar");
+      toggleBtn.setAttribute("aria-label", toggleBtn.textContent);
       header.appendChild(toggleBtn);
       contentDiv.appendChild(header);
       const canvas = document.createElement("canvas");
@@ -513,9 +1070,9 @@
           const index = elements[0].index;
           const maker = filteredMakerCount[index][0];
           const worksByMaker = works.filter(work => work.makerName === maker);
-          let content = `制作组: ${maker}\n作品数: ${worksByMaker.length}\n\n`;
+          let content = `${i18n.t("workMakerLabel")}: ${maker}\n${i18n.t("worksCount", { count: worksByMaker.length })}\n\n`;
           worksByMaker.forEach(work => {
-            content += `作品名称: ${work.name}\n购买日期: ${work.date}\n价格: ${work.price} 日元\n\n`;
+            content += `${i18n.t("workNameLabel")}: ${work.name}\n${i18n.t("purchaseDate")}: ${work.date}\n${i18n.t("priceYen", { amount: work.price })}\n\n`;
           });
           modal.customAlert(content);
         }
@@ -525,7 +1082,7 @@
         data: {
           labels: filteredMakerCount.map(item => item[0]),
           datasets: [{
-            label: "作品数目",
+            label: i18n.t("workCount"),
             data: filteredMakerCount.map(item => item[1].count),
             backgroundColor: backgroundColors,
             borderColor: borderColors,
@@ -552,13 +1109,13 @@
       });
       const sortedDates = Object.keys(groups).sort();
       const counts = sortedDates.map(date => groups[date]);
-      const container = charts.createChartContainer("chartContainer3", "550px", "100px", "500px", "400px", "每日购买数量");
+      const container = charts.createChartContainer("chartContainer3", "550px", "100px", "500px", "400px", i18n.t("chartTimelineTitle"));
       const contentDiv = container.querySelector(".chart-content");
       while (contentDiv.firstChild) contentDiv.removeChild(contentDiv.firstChild);
       const header = document.createElement("h3");
       header.style.textAlign = "center";
       header.style.margin = "0";
-      header.textContent = "每日购买数量";
+      header.textContent = i18n.t("chartTimelineTitle");
       contentDiv.appendChild(header);
       const canvas = document.createElement("canvas");
       canvas.style.width = "100%";
@@ -568,17 +1125,17 @@
       if (window.timelineChartObj) { window.timelineChartObj.destroy(); }
       const options = {
         scales: {
-          x: { title: { display: true, text: '购买日期' } },
-          y: { beginAtZero: true, title: { display: true, text: '购买数量' } }
+          x: { title: { display: true, text: i18n.t("purchaseDate") } },
+          y: { beginAtZero: true, title: { display: true, text: i18n.t("purchaseCountLabel") } }
         },
         onClick: (evt, elements) => {
           if (elements.length > 0) {
             const index = elements[0].index;
             const date = sortedDates[index];
             const worksOnDate = works.filter(work => new Date(work.date).toISOString().slice(0,10) === date);
-            let content = `日期: ${date}\n购买数量: ${worksOnDate.length}\n\n`;
+            let content = `${i18n.t("dateLabel", { date })}\n${i18n.t("purchaseCount", { count: worksOnDate.length })}\n\n`;
             worksOnDate.forEach(work => {
-              content += `作品名称: ${work.name}\n制作组: ${work.makerName}\n价格: ${work.price} 日元\n\n`;
+              content += `${i18n.t("workNameLabel")}: ${work.name}\n${i18n.t("workMakerLabel")}: ${work.makerName}\n${i18n.t("priceYen", { amount: work.price })}\n\n`;
             });
             modal.customAlert(content);
           }
@@ -589,7 +1146,7 @@
         data: {
           labels: sortedDates,
           datasets: [{
-            label: "每日购买数量",
+            label: i18n.t("chartTimelineTitle"),
             data: counts,
             fill: false,
             borderColor: 'rgba(54, 162, 235, 1)',
@@ -610,13 +1167,13 @@
       let cumulative = [];
       let total = 0;
       sortedDates.forEach(date => { total += groups[date]; cumulative.push(total); });
-      const container = charts.createChartContainer("chartContainer4", "550px", "650px", "500px", "400px", "累计消费金额");
+      const container = charts.createChartContainer("chartContainer4", "550px", "650px", "500px", "400px", i18n.t("chartCumulativeTitle"));
       const contentDiv = container.querySelector(".chart-content");
       while (contentDiv.firstChild) contentDiv.removeChild(contentDiv.firstChild);
       const header = document.createElement("h3");
       header.style.textAlign = "center";
       header.style.margin = "0";
-      header.textContent = "累计消费金额（日元）";
+      header.textContent = i18n.t("chartCumulativeTitle") + " (JPY)";
       contentDiv.appendChild(header);
       const canvas = document.createElement("canvas");
       canvas.style.width = "100%";
@@ -626,20 +1183,20 @@
       if (window.cumulativeChartObj) { window.cumulativeChartObj.destroy(); }
       const options = {
         scales: {
-          x: { title: { display: true, text: '购买日期' } },
-          y: { beginAtZero: true, title: { display: true, text: '累计金额' } }
+          x: { title: { display: true, text: i18n.t("purchaseDate") } },
+          y: { beginAtZero: true, title: { display: true, text: i18n.t("chartCumulativeTitle") } }
         },
         onClick: (evt, elements) => {
           if (elements.length > 0) {
             const index = elements[0].index;
             const date = sortedDates[index];
             const worksOnDate = works.filter(work => new Date(work.date).toISOString().slice(0,10) === date);
-            let content = `日期: ${date}\n当日作品: ${worksOnDate.length}\n\n`;
+            let content = `${i18n.t("dateLabel", { date })}\n${i18n.t("purchaseCount", { count: worksOnDate.length })}\n\n`;
             worksOnDate.forEach(work => {
-              content += `作品名称: ${work.name}\n制作组: ${work.makerName}\n价格: ${work.price} 日元\n\n`;
+              content += `${i18n.t("workNameLabel")}: ${work.name}\n${i18n.t("workMakerLabel")}: ${work.makerName}\n${i18n.t("priceYen", { amount: work.price })}\n\n`;
             });
             const dayTotal = worksOnDate.reduce((sum, work) => sum + work.price, 0);
-            modal.customAlertWithExtraInfo(content, "当天总价：" + dayTotal + " 日元");
+            modal.customAlertWithExtraInfo(content, i18n.t("totalDay", { amount: dayTotal }));
           }
         }
       };
@@ -648,7 +1205,7 @@
         data: {
           labels: sortedDates,
           datasets: [{
-            label: "累计消费金额",
+            label: i18n.t("chartCumulativeTitle"),
             data: cumulative,
             fill: true,
             borderColor: 'rgba(255, 159, 64, 1)',
@@ -661,7 +1218,7 @@
     },
     drawCombinedBarChart(title, labels, data1, data2, datasetLabel1, datasetLabel2, yAxisLabel, uniqueKey) {
       if(ui.existingComparisonCharts[uniqueKey]) {
-        modal.customAlert("该分析已存在。");
+        modal.customAlert(i18n.t("analysisExists"));
         return;
       }
       ui.existingComparisonCharts[uniqueKey] = true;
@@ -711,7 +1268,7 @@
               const clickedLabel = labels[index];
               const clickedValue = datasetIndex === 0 ? data1[index] : data2[index];
               const datasetName = datasetIndex === 0 ? datasetLabel1 : datasetLabel2;
-              modal.customAlert("标签：" + clickedLabel + "\n" + datasetName + ": " + clickedValue);
+              modal.customAlert(i18n.t("comparisonLabel", { label: clickedLabel, dataset: datasetName, value: clickedValue }));
             }
           }
         }
@@ -773,20 +1330,20 @@
       const data1 = labels.map(label => genres1.get(label) || 0);
       const data2 = labels.map(label => genres2.get(label) || 0);
       charts.drawCombinedBarChart(
-        "不同类型作品偏好对比",
+        i18n.t("aspectPrefType"),
         labels,
         data1,
         data2,
-        "时间段 1 作品数",
-        "时间段 2 作品数",
-        "作品数",
+        `${i18n.t("period1")} ${i18n.t("workCount")}`,
+        `${i18n.t("period2")} ${i18n.t("workCount")}`,
+        i18n.t("workCount"),
         `prefType_${Date.now()}`
       );
     }
 
     if (aspects.prefMaker || aspects.makerOverall) {
-      const makers1 = countByKey(period1Works, work => work.makerName || "未知");
-      const makers2 = countByKey(period2Works, work => work.makerName || "未知");
+      const makers1 = countByKey(period1Works, work => work.makerName || i18n.t("makerOptionUnknown"));
+      const makers2 = countByKey(period2Works, work => work.makerName || i18n.t("makerOptionUnknown"));
       const allMakers = [...new Set([...makers1.keys(), ...makers2.keys()])];
       const combinedSorted = allMakers
         .map(maker => ({ maker, total: (makers1.get(maker) || 0) + (makers2.get(maker) || 0) }))
@@ -796,13 +1353,13 @@
         const data1 = topMakers.map(maker => makers1.get(maker) || 0);
         const data2 = topMakers.map(maker => makers2.get(maker) || 0);
         charts.drawCombinedBarChart(
-          "不同制作组偏好对比",
+          i18n.t("aspectPrefMaker"),
           topMakers,
           data1,
           data2,
-          "时间段 1 作品数",
-          "时间段 2 作品数",
-          "作品数",
+          `${i18n.t("period1")} ${i18n.t("workCount")}`,
+          `${i18n.t("period2")} ${i18n.t("workCount")}`,
+          i18n.t("workCount"),
           `prefMaker_${Date.now()}`
         );
       }
@@ -814,9 +1371,16 @@
         });
         const sum1 = summarize(period1Works);
         const sum2 = summarize(period2Works);
-        const summaryText =
-          `时间段 1：\n  作品数：${sum1.count}\n  总价：${sum1.totalPrice} 日元 (${(sum1.totalPrice * exchangeRate).toFixed(2)} 人民币)\n\n` +
-          `时间段 2：\n  作品数：${sum2.count}\n  总价：${sum2.totalPrice} 日元 (${(sum2.totalPrice * exchangeRate).toFixed(2)} 人民币)`;
+        const config = i18n.getCurrencyConfig();
+        const summaryText = i18n.t("makerOverallSummary", {
+          count1: sum1.count,
+          price1: sum1.totalPrice,
+          converted1: (sum1.totalPrice * exchangeRate).toFixed(2),
+          count2: sum2.count,
+          price2: sum2.totalPrice,
+          converted2: (sum2.totalPrice * exchangeRate).toFixed(2),
+          currency: config.label
+        });
         modal.customAlert(summaryText);
       }
     }
@@ -825,7 +1389,7 @@
       const makerGenreMap = works => {
         const outer = new Map();
         works.forEach(work => {
-          const maker = work.makerName || "未知";
+          const maker = work.makerName || i18n.t("makerOptionUnknown");
           const genres = collectGenres(work);
           if (genres.length === 0) return;
           if (!outer.has(maker)) outer.set(maker, new Map());
@@ -848,7 +1412,7 @@
       addTotals(map2);
       const topMakers = [...makerTotals.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(entry => entry[0]);
 
-      let text = "制作组作品类型对比（前 5 制作组）\n\n";
+      let text = i18n.t("makerTypeTitle");
       topMakers.forEach(maker => {
         const g1 = map1.get(maker) || new Map();
         const g2 = map2.get(maker) || new Map();
@@ -857,7 +1421,7 @@
         allGenres.forEach(genre => {
           const v1 = g1.get(genre) || 0;
           const v2 = g2.get(genre) || 0;
-          text += `  ${genre}: 时间段1 ${v1} / 时间段2 ${v2}\n`;
+          text += i18n.t("timelineItem", { genre, v1, v2 });
         });
         text += "\n";
       });
@@ -881,7 +1445,7 @@
         const pageText = await dataProcessor.fetchUrlAsync(url + pageNum);
         if (pageText) return pageText;
         if (attempt < maxRetries) {
-          utils.styledLog(`🔁 第 ${attempt + 1} 次重试页面 ${pageNum}`, "color: #ff8c00; font-weight: bold;");
+          utils.styledLog(`🔁 ${i18n.t("retryPage", { attempt: attempt + 1, page: pageNum })}`, "color: #ff8c00; font-weight: bold;");
           await new Promise(resolve => setTimeout(resolve, 300));
         }
       }
@@ -907,7 +1471,7 @@
         if (detailMode && work.url !== "") {
           detailPromises.push((async (w) => {
             try {
-              utils.styledLog(`🔍 获取作品详情: ${w.url}`, "color: #9933ff; font-weight: bold;");
+              utils.styledLog(`🔍 ${i18n.t("fetchDetailLog", { url: w.url })}`, "color: #9933ff; font-weight: bold;");
               const workText = await dataProcessor.fetchUrlAsync(w.url);
               const docWork = new DOMParser().parseFromString(workText, "text/html");
               w.mainGenre = [];
@@ -952,7 +1516,7 @@
       const concurrencyLimit = 4;
       const firstPageText = await dataProcessor.fetchPageWithRetry(dlurl, 1);
       if (!firstPageText) {
-        ui.errorLogs.push("无法获取第一页数据，终止任务。");
+        ui.errorLogs.push(i18n.t("firstPageFail"));
         return result;
       }
       const firstDoc = new DOMParser().parseFromString(firstPageText, "text/html");
@@ -990,38 +1554,39 @@
 
   const downloadContent = {
     generateMarkdown(result, exchangeRate, filteredGenreCount, filteredMakerCount) {
-      let md = `# DLsite 购买历史统计结果\n\n`;
-      md += `## 统计概览\n\n`;
-      md += `| 统计项目 | 数值 |\n`;
+      const currencyText = currencyHelper.format(result.totalPrice, exchangeRate);
+      let md = `# ${i18n.t("downloadTitle")}\n\n`;
+      md += `## ${i18n.t("overview")}\n\n`;
+      md += `| ${i18n.t("statItem")} | ${i18n.t("valueLabel")} |\n`;
       md += `| --- | --- |\n`;
-      md += `| 购买总数 | ${result.count} 部 |\n`;
-      md += `| 总消费金额 | ${result.totalPrice} 日元 (${(result.totalPrice * exchangeRate).toFixed(2)} 人民币) |\n\n`;
-      md += `## 各类型作品数排名\n\n`;
-      md += `| 类型 | 作品数目 |\n`;
+      md += `| ${i18n.t("purchaseTotal")} | ${result.count} ${i18n.t("workCount")} |\n`;
+      md += `| ${i18n.t("totalSpent")} | ${currencyText} |\n\n`;
+      md += `## ${i18n.t("genreRanking")}\n\n`;
+      md += `| ${i18n.t("workTypeLabel")} | ${i18n.t("workCount")} |\n`;
       md += `| --- | --- |\n`;
       filteredGenreCount.forEach(item => {
           md += `| ${item[0]} | ${item[1].count} |\n`;
       });
       md += `\n`;
-      md += `## 各制作组作品数排名\n\n`;
-      md += `| 制作组 | 作品数目 |\n`;
+      md += `## ${i18n.t("makerRanking")}\n\n`;
+      md += `| ${i18n.t("workMakerLabel")} | ${i18n.t("workCount")} |\n`;
       md += `| --- | --- |\n`;
       filteredMakerCount.forEach(item => {
           md += `| ${item[0]} | ${item[1].count} |\n`;
       });
       md += `\n`;
-      md += `## 已下架作品\n\n`;
+      md += `## ${i18n.t("eolTitle")}\n\n`;
       if (result.eol.length > 0) {
-          md += `| 购买日期 | 制作组 | 作品名称 | 价格（円） |\n`;
+          md += `| ${i18n.t("purchaseDate")} | ${i18n.t("workMakerLabel")} | ${i18n.t("workNameLabel")} | ${i18n.t("priceYen", { amount: i18n.t("valueLabel") })} |\n`;
           md += `| --- | --- | --- | --- |\n`;
           result.eol.forEach(eol => {
-              md += `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${eol.price} |\n`;
+              md += `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${i18n.t("priceYen", { amount: eol.price })} |\n`;
           });
       } else {
-          md += `暂无已下架作品\n`;
+          md += `${i18n.t("noEol")}\n`;
       }
       md += `\n`;
-      md += `## 时间轴视图\n\n`;
+      md += `## ${i18n.t("timeline")}\n\n`;
       const timelineGroups = {};
       result.works.forEach(work => {
         let day = new Date(work.date).toISOString().slice(0,10);
@@ -1030,44 +1595,45 @@
       });
       const sortedDates = Object.keys(timelineGroups).sort();
       sortedDates.forEach(date => {
-          md += `### ${date} (${timelineGroups[date].length} 项)\n\n`;
-          md += `| 作品名称 | 制作组 | 价格（円） |\n`;
+          md += `### ${date} (${timelineGroups[date].length} ${i18n.t("workCount")})\n\n`;
+          md += `| ${i18n.t("workNameLabel")} | ${i18n.t("workMakerLabel")} | ${i18n.t("priceYen", { amount: i18n.t("valueLabel") })} |\n`;
           md += `| --- | --- | --- |\n`;
           timelineGroups[date].forEach(work => {
-              md += `| ${work.name} | ${work.makerName} | ${work.price} |\n`;
+              md += `| ${work.name} | ${work.makerName} | ${i18n.t("priceYen", { amount: work.price })} |\n`;
           });
           md += `\n`;
       });
       return md;
     },
     generateCSV(result, exchangeRate, filteredGenreCount, filteredMakerCount) {
+      const currencyText = currencyHelper.format(result.totalPrice, exchangeRate);
       let csv = "";
-      csv += "统计项目,数值\n";
-      csv += `购买总数,${result.count} 部\n`;
-      csv += `总消费金额,${result.totalPrice} 日元,${(result.totalPrice * exchangeRate).toFixed(2)} 人民币\n\n`;
-      csv += "各类型作品数排名\n";
-      csv += "类型,作品数目\n";
+      csv += `${i18n.t("statItem")},${i18n.t("valueLabel")}\n`;
+      csv += `${i18n.t("purchaseTotal")},${result.count} ${i18n.t("workCount")}\n`;
+      csv += `${i18n.t("totalSpent")},${currencyText}\n\n`;
+      csv += `${i18n.t("genreRanking")}\n`;
+      csv += `${i18n.t("workTypeLabel")},${i18n.t("workCount")}\n`;
       filteredGenreCount.forEach(item => {
           csv += `${item[0]},${item[1].count}\n`;
       });
       csv += "\n";
-      csv += "各制作组作品数排名\n";
-      csv += "制作组,作品数目\n";
+      csv += `${i18n.t("makerRanking")}\n`;
+      csv += `${i18n.t("workMakerLabel")},${i18n.t("workCount")}\n`;
       filteredMakerCount.forEach(item => {
           csv += `${item[0]},${item[1].count}\n`;
       });
       csv += "\n";
-      csv += "已下架作品\n";
-      csv += "购买日期,制作组,作品名称,价格（円）\n";
+      csv += `${i18n.t("eolTitle")}\n`;
+      csv += `${i18n.t("purchaseDate")},${i18n.t("workMakerLabel")},${i18n.t("workNameLabel")},${i18n.t("priceYen", { amount: i18n.t("valueLabel") })}\n`;
       if (result.eol.length > 0) {
           result.eol.forEach(eol => {
               csv += `${eol.date},${eol.makerName},${eol.name},${eol.price}\n`;
           });
       } else {
-          csv += "暂无已下架作品\n";
+          csv += `${i18n.t("noEol")}\n`;
       }
       csv += "\n";
-      csv += "时间轴视图\n";
+      csv += `${i18n.t("timeline")}\n`;
       const timelineGroups = {};
       result.works.forEach(work => {
         let day = new Date(work.date).toISOString().slice(0,10);
@@ -1076,8 +1642,8 @@
       });
       const sortedDates = Object.keys(timelineGroups).sort();
       sortedDates.forEach(date => {
-          csv += `日期: ${date} (${timelineGroups[date].length} 项)\n`;
-          csv += "作品名称,制作组,价格（円）\n";
+          csv += `${i18n.t("dateLabel", { date })} (${timelineGroups[date].length} ${i18n.t("workCount")})\n`;
+          csv += `${i18n.t("workNameLabel")},${i18n.t("workMakerLabel")},${i18n.t("priceYen", { amount: i18n.t("valueLabel") })}\n`;
           timelineGroups[date].forEach(work => {
               csv += `${work.name},${work.makerName},${work.price}\n`;
           });
@@ -1086,10 +1652,12 @@
       return "\ufeff" + csv;
       },
       generateJSON(result, exchangeRate, filteredGenreCount, filteredMakerCount) {
+          const config = i18n.getCurrencyConfig();
           const jsonObject = {
               count: result.count,
               totalPriceJPY: result.totalPrice,
-              totalPriceCNY: (result.totalPrice * exchangeRate).toFixed(2),
+              totalPriceConverted: (result.totalPrice * exchangeRate).toFixed(2),
+              currency: config.label,
               genreRanking: filteredGenreCount.map(([genre, entry]) => ({ genre, count: entry.count })),
               makerRanking: filteredMakerCount.map(([maker, entry]) => ({ maker, count: entry.count })),
               eol: result.eol,
@@ -1100,18 +1668,19 @@
     addDownloadButton(result, exchangeRate, filteredGenreCount, filteredMakerCount) {
       const downloadBtn = document.createElement("button");
       downloadBtn.id = "downloadBtn";
-      downloadBtn.textContent = "下载结果";
+      downloadBtn.textContent = i18n.t("download");
       downloadBtn.className = "btn";
       downloadBtn.style.position = "fixed";
       downloadBtn.style.top = "10px";
       downloadBtn.style.left = "10px";
       downloadBtn.style.zIndex = "100001";
+      downloadBtn.setAttribute("aria-label", i18n.t("download"));
       downloadBtn.addEventListener("click", async () => {
-        const choice = await modal.customChoice("请选择要下载的文件格式：", [
-          { label: "Markdown (.md)", value: "md" },
-            { label: "CSV (.csv)", value: "csv" },
-            { label: "JSON (.json)", value: "json" },
-          { label: "全部下载", value: "all" }
+        const choice = await modal.customChoice(i18n.t("downloadFormatPrompt"), [
+          { label: i18n.t("downloadMd"), value: "md" },
+            { label: i18n.t("downloadCsv"), value: "csv" },
+            { label: i18n.t("downloadJson"), value: "json" },
+          { label: i18n.t("downloadAll"), value: "all" }
         ]);
         if(choice === "md" || choice === "all") {
           const mdContent = downloadContent.generateMarkdown(result, exchangeRate, filteredGenreCount, filteredMakerCount);
@@ -1374,7 +1943,7 @@
         const progressText = document.createElement("div");
         progressText.id = "progressText";
         progressText.className = "progress-text";
-        progressText.textContent = "准备中...";
+        progressText.textContent = i18n.t("preparation");
         progressBar.appendChild(innerBar);
         progressBar.appendChild(progressText);
         document.body.appendChild(progressBar);
@@ -1384,21 +1953,100 @@
       if (textElem) {
         const rounded = Math.min(100, Math.max(0, Math.round(progress)));
         if (currentBatch && totalBatches) {
-          textElem.textContent = `批次 ${currentBatch} / ${totalBatches} (${rounded}%)`;
+          textElem.textContent = i18n.t("batchProgress", { current: currentBatch, total: totalBatches, percent: rounded });
         } else {
-          textElem.textContent = isNaN(rounded) ? "准备中..." : `${rounded}%`;
+          textElem.textContent = isNaN(rounded) ? i18n.t("preparation") : `${rounded}%`;
         }
       }
+    },
+    async rebuildAfterLanguageChange() {
+      const savedRate = appState.customRates[i18n.current];
+      let rate = typeof savedRate === "number" ? savedRate : i18n.getCurrencyConfig().rate;
+      if (i18n.current === "ja") rate = 1;
+      appState.exchangeRate = rate;
+      appState.currencyLang = i18n.current;
+      const label = document.querySelector("#languageSwitcher label");
+      if (label) label.textContent = i18n.t("selectLanguage");
+      const select = document.getElementById("languageSelectBox");
+      if (select) {
+        Array.from(select.options).forEach(option => {
+          option.textContent = i18n.languages[option.value].name;
+          option.selected = option.value === i18n.current;
+        });
+        select.setAttribute("aria-label", i18n.t("selectLanguage"));
+      }
+      if (!appState.result) return;
+      cleanup();
+      if (!document.getElementById("DLsiteStyle")) {
+        ui.injectStyles();
+      }
+      const renderCharts = async () => {
+        if (appState.showCharts) {
+          if (typeof Chart === "undefined") {
+            await new Promise((resolve, reject) => {
+              const script = document.createElement("script");
+              script.src = "https://cdn.jsdelivr.net/npm/chart.js";
+              script.onload = resolve;
+              script.onerror = reject;
+              document.head.appendChild(script);
+            });
+          }
+          if (appState.detailMode) {
+            charts.drawGenreChart(appState.filteredGenreCount, appState.result.works, window.genreChartObj ? window.genreChartObj.config.type : "bar");
+          }
+          charts.drawMakerChart(appState.filteredMakerCount, appState.result.works, window.makerChartObj ? window.makerChartObj.config.type : "bar");
+          charts.drawTimelineChart(appState.result.works);
+          charts.drawCumulativeChart(appState.result.works);
+        }
+      };
+      await renderCharts();
+      displayResults(appState.result, appState.exchangeRate, appState.filteredGenreCount, appState.filteredMakerCount, appState.excludeThreshold);
+      ui.addCompareButton(appState.result, appState.exchangeRate);
+      downloadContent.addDownloadButton(appState.result, appState.exchangeRate, appState.filteredGenreCount, appState.filteredMakerCount);
+      ui.addResetButton();
+    },
+    addLanguageSwitcher() {
+      let switcher = document.getElementById("languageSwitcher");
+      if (switcher) return;
+      switcher = document.createElement("div");
+      switcher.id = "languageSwitcher";
+      switcher.style.position = "fixed";
+      switcher.style.top = "10px";
+      switcher.style.right = "10px";
+      switcher.style.zIndex = "100002";
+      const label = document.createElement("label");
+      label.textContent = i18n.t("selectLanguage");
+      label.style.marginRight = "6px";
+      label.setAttribute("for", "languageSelectBox");
+      const select = document.createElement("select");
+      select.id = "languageSelectBox";
+      select.setAttribute("aria-label", i18n.t("selectLanguage"));
+      Object.keys(i18n.languages).forEach(lang => {
+        const option = document.createElement("option");
+        option.value = lang;
+        option.textContent = i18n.languages[lang].name;
+        if (lang === i18n.current) option.selected = true;
+        select.appendChild(option);
+      });
+      select.addEventListener("change", async () => {
+        i18n.setLanguage(select.value);
+        utils.styledLog(i18n.t("languageChanged", { lang: i18n.languages[select.value].name }), "color: #1e88e5; font-weight: bold;", "info");
+        await ui.rebuildAfterLanguageChange();
+      });
+      switcher.appendChild(label);
+      switcher.appendChild(select);
+      document.body.appendChild(switcher);
     },
     addCompareButton(result, exchangeRate) {
       const compareBtn = document.createElement("button");
       compareBtn.id = "compareBtn";
-      compareBtn.textContent = "数据对比分析";
+      compareBtn.textContent = i18n.t("compare");
       compareBtn.className = "btn";
       compareBtn.style.position = "fixed";
       compareBtn.style.top = "50px";
       compareBtn.style.left = "10px";
       compareBtn.style.zIndex = "100001";
+      compareBtn.setAttribute("aria-label", i18n.t("compare"));
       compareBtn.addEventListener("click", async () => {
         let availableDates = [...new Set(result.works.map(work => new Date(work.date).toISOString().slice(0,10)))].sort();
         const periods = await modal.customSelectPeriods(availableDates);
@@ -1411,7 +2059,7 @@
     addResetButton() {
       const resetBtn = document.createElement("button");
       resetBtn.id = "resetBtn";
-      resetBtn.textContent = "重置";
+      resetBtn.textContent = i18n.t("reset");
       resetBtn.className = "btn";
       resetBtn.style.position = "fixed";
       resetBtn.style.bottom = "10px";
@@ -1419,6 +2067,7 @@
       resetBtn.style.background = "red";
       resetBtn.style.color = "white";
       resetBtn.style.zIndex = "100002";
+      resetBtn.setAttribute("aria-label", i18n.t("reset"));
       resetBtn.addEventListener("click", () => {
         cleanup();
         const injectedStyle = document.getElementById("DLsiteStyle");
@@ -1452,89 +2101,102 @@
 
   const main = async () => {
     cleanup();
+    ui.addLanguageSwitcher();
     const isValidDLsitePage = () => {
       return /dlsite\.com\/maniax\/mypage\/userbuy/.test(window.location.href) &&
              document.querySelector(".work_list_main") !== null;
     };
     if (!isValidDLsitePage()) {
-      const jump = await modal.customConfirm("当前页面未检测到 DLsite 购买记录，是否跳转到正确的购买历史页面？");
+      const jump = await modal.customConfirm(i18n.t("notDlsite"));
       if (jump) {
         window.location.href = "https://www.dlsite.com/maniax/mypage/userbuy/=/type/all/start/all/sort/1/order/1/page/1";
         return;
       } else {
-        await modal.customAlert("请切换到 DLsite 购买历史页面后再运行此脚本。");
+        await modal.customAlert(i18n.t("switchToDlsite"));
         return;
       }
     }
-    utils.styledLog("✦ DLsite购买历史统计 ✦", "font-size: 28px; font-weight: bold; color: white; background: linear-gradient(to right, #ff6347, #ff1493, #8a2be2, #32cd32); padding: 10px; border-radius: 8px;");
+    utils.styledLog(i18n.t("pageTitleLog"), "font-size: 28px; font-weight: bold; color: white; background: linear-gradient(to right, #ff6347, #ff1493, #8a2be2, #32cd32); padding: 10px; border-radius: 8px;");
     let detailMode = true;
-    const quickView = await modal.customChoice("是否开启快速查看消费金额？（仅统计金额）", [
-      { label: "是", value: "y" },
-      { label: "否", value: "n" }
+    const quickView = await modal.customChoice(i18n.t("quickViewPrompt"), [
+      { label: i18n.t("yes"), value: "y" },
+      { label: i18n.t("no"), value: "n" }
     ]);
-    if (quickView.toLowerCase() === "y") detailMode = false;
+    if (quickView && quickView.toLowerCase() === "y") detailMode = false;
     let dlurl = "https://www.dlsite.com/maniax/mypage/userbuy/=/type/all/start/all/sort/1/order/1/page/";
     if (detailMode) {
       const typeOptionsArr = [
-        { label: "全部作品", value: "0" },
-        { label: "同人：所有", value: "12" },
-        { label: "同人：全年龄", value: "2" },
-        { label: "同人：男性向", value: "1" },
-        { label: "同人：女性向", value: "3" },
-        { label: "商业游戏：所有", value: "13" },
-        { label: "商业游戏：全年龄", value: "9" },
-        { label: "商业游戏：男性向", value: "4" },
-        { label: "漫画：所有", value: "14" },
-        { label: "漫画：全年龄", value: "10" },
-        { label: "漫画：男性向", value: "7" },
-        { label: "漫画：女性向", value: "11" }
+        { label: i18n.t("typeAllWorks"), value: "0" },
+        { label: i18n.t("doujinAll"), value: "12" },
+        { label: i18n.t("doujinAllAges"), value: "2" },
+        { label: i18n.t("doujinMale"), value: "1" },
+        { label: i18n.t("doujinFemale"), value: "3" },
+        { label: i18n.t("commercialAll"), value: "13" },
+        { label: i18n.t("commercialAllAges"), value: "9" },
+        { label: i18n.t("commercialMale"), value: "4" },
+        { label: i18n.t("mangaAll"), value: "14" },
+        { label: i18n.t("mangaAllAges"), value: "10" },
+        { label: i18n.t("mangaMale"), value: "7" },
+        { label: i18n.t("mangaFemale"), value: "11" }
       ];
-      const typeChoice = await modal.customChoice("请选择作品类型：", typeOptionsArr);
+      const typeChoice = await modal.customChoice(i18n.t("selectTypePrompt"), typeOptionsArr);
       if (typeChoice === "0") dlurl = dlurl.replace(/type\/[^/]+/, "type/all");
       else dlurl = dlurl.replace(/type\/[^/]+/, `type/${typeChoice}`);
     } else {
       dlurl = dlurl.replace(/type\/[^/]+/, "type/all");
     }
-    let exchangeRate = 0.048;
-    if (detailMode) {
-      const exchangeChoice = await modal.customChoice("是否需要修改汇率？", [
-        { label: "使用默认 (1人民币 = 0.048日元)", value: "default" },
-        { label: "修改汇率", value: "modify" }
+    let exchangeRate = i18n.getCurrencyConfig().rate;
+    appState.currencyLang = i18n.current;
+    if (i18n.current !== "ja") {
+      const exchangeChoice = await modal.customChoice(i18n.t("modifyRatePrompt"), [
+        { label: i18n.t("useDefaultRateOption"), value: "default" },
+        { label: i18n.t("modifyRateOption"), value: "modify" }
       ]);
       if (exchangeChoice === "modify") {
-        const newExchangeRateStr = await modal.customPrompt("请输入新的人民币到日元的汇率（例如 0.05）：", "0.05");
+        const promptText = i18n.current === "en" ? i18n.t("ratePromptUsd") : i18n.t("enterRatePrompt");
+        const newExchangeRateStr = await modal.customPrompt(promptText, exchangeRate.toString());
         const newExchangeRate = parseFloat(newExchangeRateStr);
         if (!isNaN(newExchangeRate) && newExchangeRate > 0) exchangeRate = newExchangeRate;
-        else utils.styledLog("❌ 输入无效，使用默认汇率", "color: red; font-weight: bold;", "error");
+        else utils.styledLog(i18n.t("invalidRate"), "color: red; font-weight: bold;", "error");
       } else {
-        utils.styledLog("✔️ 使用默认汇率 1人民币 = 0.04858日元", "color: green; font-weight: bold;", "info");
+        utils.styledLog(i18n.t("usingDefaultRate", { rate: exchangeRate }), "color: green; font-weight: bold;", "info");
       }
+    } else {
+      exchangeRate = 1;
     }
-    console.group("📄 页面抓取进度");
+    appState.customRates[i18n.current] = exchangeRate;
+    console.group(`📄 ${i18n.t("progressGroup")}`);
     const result = await dataProcessor.fetchAllPages(dlurl, detailMode, (currentBatch, totalBatches) => {
       ui.updateProgressBar((currentBatch / totalBatches) * 100, currentBatch, totalBatches);
     });
     console.groupEnd();
-    const excludeResponse = await modal.customPrompt("请输入要排除的最少作品数目（例如输入 3 表示排除数目小于 3 的作品类型）：", "0");
+    const excludeResponse = await modal.customPrompt(i18n.t("excludePrompt"), "0");
     let excludeThreshold = 0;
     if (excludeResponse) {
       excludeThreshold = parseInt(excludeResponse);
       if (isNaN(excludeThreshold) || excludeThreshold < 0) {
-        utils.styledLog("❌ 无效的输入，使用默认值 0（不过滤）", "color: red; font-weight: bold;", "error");
+        utils.styledLog(i18n.t("excludeInvalid"), "color: red; font-weight: bold;", "error");
         excludeThreshold = 0;
       }
     } else {
-      utils.styledLog("ℹ️ 未输入数值，使用默认值 0（不过滤）", "color: #666666; font-weight: bold;", "info");
+      utils.styledLog(i18n.t("excludeEmpty"), "color: #666666; font-weight: bold;", "info");
     }
     result.genreCount = [...result.genreCount.entries()].sort((a, b) => b[1].count - a[1].count);
     result.makerCount = [...result.makerCount.entries()].sort((a, b) => b[1].count - a[1].count);
     const filteredGenreCount = excludeThreshold === 0 ? result.genreCount : result.genreCount.filter(([, entry]) => entry.count >= excludeThreshold);
     const filteredMakerCount = excludeThreshold === 0 ? result.makerCount : result.makerCount.filter(([, entry]) => entry.count >= excludeThreshold);
-    const showChart = await modal.customChoice("是否显示图表数据展示？", [
-      { label: "显示", value: "y" },
-      { label: "不显示", value: "n" }
+    const showChart = await modal.customChoice(i18n.t("showChartPrompt"), [
+      { label: i18n.t("showCharts"), value: "y" },
+      { label: i18n.t("hideCharts"), value: "n" }
     ]);
-    if (showChart.toLowerCase() === "y") {
+    appState.showCharts = showChart && showChart.toLowerCase() === "y";
+    appState.result = result;
+    appState.filteredGenreCount = filteredGenreCount;
+    appState.filteredMakerCount = filteredMakerCount;
+    appState.exchangeRate = exchangeRate;
+    appState.excludeThreshold = excludeThreshold;
+    appState.detailMode = detailMode;
+    if (appState.showCharts) {
       if (typeof Chart === "undefined") {
         await new Promise((resolve, reject) => {
           const script = document.createElement("script");
@@ -1559,7 +2221,7 @@
   };
 
   const displayResults = (result, exchangeRate, filteredGenreCount, filteredMakerCount, excludeThreshold = 0) => {
-    const container = charts.createChartContainer("resultWindow", "200px", "200px", "1000px", "800px", "查询结果");
+    const container = charts.createChartContainer("resultWindow", "200px", "200px", "1000px", "800px", i18n.t("filterTitle"));
     const contentDiv = container.querySelector(".chart-content");
     while (contentDiv.firstChild) contentDiv.removeChild(contentDiv.firstChild);
 
@@ -1596,13 +2258,14 @@
 
     const keywordInput = document.createElement("input");
     keywordInput.type = "text";
-    keywordInput.placeholder = "作品名关键词";
+    keywordInput.placeholder = i18n.t("keywordPlaceholder");
+    keywordInput.setAttribute("aria-label", i18n.t("keywordPlaceholder"));
     keywordInput.style.flex = "1";
 
     const makerSelect = document.createElement("select");
     const allOption = document.createElement("option");
     allOption.value = "";
-    allOption.textContent = "全部制作组";
+    allOption.textContent = i18n.t("allMakers");
     makerSelect.appendChild(allOption);
     const makerNames = Array.isArray(result.makerCount) ? result.makerCount.map(item => item[0]) : [...result.makerCount.keys()];
     makerNames.sort().forEach(name => {
@@ -1621,22 +2284,26 @@
 
     const minPriceInput = document.createElement("input");
     minPriceInput.type = "number";
-    minPriceInput.placeholder = "最低价格";
+    minPriceInput.placeholder = i18n.t("minPrice");
+    minPriceInput.setAttribute("aria-label", i18n.t("minPrice"));
     minPriceInput.style.flex = "0 0 120px";
     const maxPriceInput = document.createElement("input");
     maxPriceInput.type = "number";
-    maxPriceInput.placeholder = "最高价格";
+    maxPriceInput.placeholder = i18n.t("maxPrice");
+    maxPriceInput.setAttribute("aria-label", i18n.t("maxPrice"));
     maxPriceInput.style.flex = "0 0 120px";
 
     const applyFilterBtn = document.createElement("button");
-    applyFilterBtn.textContent = "应用过滤";
+    applyFilterBtn.textContent = i18n.t("applyFilters");
     applyFilterBtn.className = "btn";
     applyFilterBtn.style.flex = "0 0 100px";
+    applyFilterBtn.setAttribute("aria-label", i18n.t("applyFilters"));
 
     const redrawChartsBtn = document.createElement("button");
-    redrawChartsBtn.textContent = "根据当前过滤器重绘图表";
+    redrawChartsBtn.textContent = i18n.t("redrawCharts");
     redrawChartsBtn.className = "btn";
     redrawChartsBtn.style.flex = "1 1 200px";
+    redrawChartsBtn.setAttribute("aria-label", i18n.t("redrawCharts"));
 
     filterForm.appendChild(keywordInput);
     filterForm.appendChild(makerSelect);
@@ -1654,11 +2321,11 @@
     const eolContent = document.createElement("div");
     const timelineContent = document.createElement("div");
 
-    const overviewSection = ui.createCollapsibleSection("统计概览", overviewContent, false);
-    const genreSection = ui.createCollapsibleSection("各类型作品数排名", genreContent, false);
-    const makerSection = ui.createCollapsibleSection("各制作组作品数排名", makerContent, false);
-    const eolSection = ui.createCollapsibleSection("已下架作品", eolContent, false);
-    const timelineSection = ui.createCollapsibleSection("时间轴视图", timelineContent, true);
+    const overviewSection = ui.createCollapsibleSection(i18n.t("overview"), overviewContent, false);
+    const genreSection = ui.createCollapsibleSection(i18n.t("genreRanking"), genreContent, false);
+    const makerSection = ui.createCollapsibleSection(i18n.t("makerRanking"), makerContent, false);
+    const eolSection = ui.createCollapsibleSection(i18n.t("eolTitle"), eolContent, false);
+    const timelineSection = ui.createCollapsibleSection(i18n.t("timeline"), timelineContent, true);
 
     contentDiv.appendChild(overviewSection);
     contentDiv.appendChild(genreSection);
@@ -1668,9 +2335,9 @@
 
     const authorContainer = document.createElement("div");
     const p1 = document.createElement("p");
-    p1.textContent = "★ 本脚本由 凛遥crush 修改制作 ★";
+    p1.textContent = i18n.t("authorCredit");
     const p2 = document.createElement("p");
-    p2.textContent = "★ 项目地址：";
+    p2.textContent = i18n.t("projectLabel");
     const link = document.createElement("a");
     link.href = "https://github.com/linyaocrush/DLsite-Purchase-Analyzer";
     link.target = "_blank";
@@ -1678,7 +2345,7 @@
     p2.appendChild(link);
     authorContainer.appendChild(p1);
     authorContainer.appendChild(p2);
-    contentDiv.appendChild(ui.createCollapsibleSection("作者信息", authorContainer, false));
+    contentDiv.appendChild(ui.createCollapsibleSection(i18n.t("authorInfo"), authorContainer, false));
 
     const computeCounts = (works) => {
       const genreMap = new Map();
@@ -1741,10 +2408,10 @@
       overviewContent.innerHTML = "";
       const totalPrice = works.reduce((sum, work) => sum + (work.price || 0), 0);
       const overviewTable = createTable(
-        ["统计项目", "数量/金额"],
+        [i18n.t("statItem"), i18n.t("valueLabel")],
         [
-          ["购买总数", `${works.length} 部`],
-          ["总消费金额", `${totalPrice} 日元 (${(totalPrice * exchangeRate).toFixed(2)} 人民币)`]
+          [i18n.t("purchaseTotal"), `${works.length} ${i18n.t("workCount")}`],
+          [i18n.t("totalSpent"), currencyHelper.format(totalPrice, exchangeRate)]
         ]
       );
       overviewContent.appendChild(overviewTable);
@@ -1752,7 +2419,7 @@
       genreContent.innerHTML = "";
       if (genreCountArr.length === 0) {
         const empty = document.createElement("p");
-        empty.textContent = "暂无符合条件的类型数据";
+        empty.textContent = i18n.t("noGenreData");
         genreContent.appendChild(empty);
       } else {
         const genreRows = genreCountArr.map(([type, entry]) => {
@@ -1764,19 +2431,19 @@
             link.target = "_blank";
             link.style.marginLeft = "5px";
             link.style.fontSize = "12px";
-            link.textContent = "跳转";
+            link.textContent = i18n.t("jumpText");
             cellContainer.appendChild(link);
           }
           return [cellContainer, `${entry.count}`];
         });
-        const genreTable = createTable(["类型", "作品数目"], genreRows);
+        const genreTable = createTable([i18n.t("workTypeLabel"), i18n.t("workCount")], genreRows);
         genreContent.appendChild(genreTable);
       }
 
       makerContent.innerHTML = "";
       if (makerCountArr.length === 0) {
         const empty = document.createElement("p");
-        empty.textContent = "暂无符合条件的制作组数据";
+        empty.textContent = i18n.t("noMakerData");
         makerContent.appendChild(empty);
       } else {
         const makerRows = makerCountArr.map(([maker, entry]) => {
@@ -1788,31 +2455,31 @@
             link.target = "_blank";
             link.style.marginLeft = "5px";
             link.style.fontSize = "12px";
-            link.textContent = "跳转";
+            link.textContent = i18n.t("jumpText");
             cellContainer.appendChild(link);
           }
           return [cellContainer, `${entry.count}`];
         });
-        const makerTable = createTable(["制作组", "作品数目"], makerRows);
+        const makerTable = createTable([i18n.t("workMakerLabel"), i18n.t("workCount")], makerRows);
         makerContent.appendChild(makerTable);
       }
 
       eolContent.innerHTML = "";
       const eolWorks = works.filter(work => !work.url);
       if (eolWorks.length > 0) {
-        const eolRows = eolWorks.map(eol => [eol.date, eol.makerName, eol.name, `${eol.price} 日元`]);
-        const eolTable = createTable(["购买日期", "制作组", "作品名称", "价格"], eolRows);
+        const eolRows = eolWorks.map(eol => [eol.date, eol.makerName, eol.name, i18n.t("priceYen", { amount: eol.price })]);
+        const eolTable = createTable([i18n.t("purchaseDate"), i18n.t("workMakerLabel"), i18n.t("workNameLabel"), i18n.t("valueLabel")], eolRows);
         eolContent.appendChild(eolTable);
       } else {
         const noEol = document.createElement("p");
-        noEol.textContent = "暂无已下架作品";
+        noEol.textContent = i18n.t("noEol");
         eolContent.appendChild(noEol);
       }
 
       timelineContent.innerHTML = "";
       if (works.length === 0) {
         const empty = document.createElement("p");
-        empty.textContent = "暂无数据";
+        empty.textContent = i18n.t("noData");
         timelineContent.appendChild(empty);
       } else {
         const timelineGroups = {};
@@ -1825,11 +2492,11 @@
         sortedDates.forEach(date => {
           const section = document.createElement("div");
           const title = document.createElement("strong");
-          title.textContent = `${date} (${timelineGroups[date].length} 项)`;
+          title.textContent = `${date} (${timelineGroups[date].length} ${i18n.t("workCount")})`;
           section.appendChild(title);
           const table = createTable(
-            ["作品名称", "制作组", "价格"],
-            timelineGroups[date].map(work => [work.name, work.makerName, `${work.price} 日元`])
+            [i18n.t("workNameLabel"), i18n.t("workMakerLabel"), i18n.t("valueLabel")],
+            timelineGroups[date].map(work => [work.name, work.makerName, i18n.t("priceYen", { amount: work.price })])
           );
           section.appendChild(table);
           timelineContent.appendChild(section);
@@ -1909,7 +2576,7 @@
     if (ui.errorLogs.length > 0) {
       const errorPre = document.createElement("pre");
       errorPre.textContent = ui.errorLogs.join("\n");
-      contentDiv.appendChild(ui.createCollapsibleSection("错误日志", errorPre, false));
+      contentDiv.appendChild(ui.createCollapsibleSection(i18n.t("errorLogTitle"), errorPre, false));
     }
   };
 
