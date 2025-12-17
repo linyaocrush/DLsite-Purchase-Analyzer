@@ -8,12 +8,14 @@
 ## 🚀 Core Upgrade Highlights
 
 - **New Visualization System**: Integrated dynamic charts with Chart.js
-- **Enhanced Interaction Experience**: Replaced native pop-ups with fully customizable modal windows
+- **Enhanced Interaction Experience**: Replaced native pop-ups with fully customizable modal windows plus floating compare/download/reset controls
+- **Triple-Language UI + Rate Memory**: Switch among Chinese/English/Japanese and keep exchange rate per language
 - **Smart Error Handling**: Real-time error log recording and auto-retry mechanism
-- **Added Data Comparison Analysis Feature**: Compare purchases and spending across different time periods
+- **Interactive Result Filtering**: Keyword, maker, date, and price filters redraw tables and charts instantly
+- **Added Data Comparison Analysis Feature**: Compare purchases and spending across different time periods  
   *(See version history v2.2)*
-- **Added Chart Download Feature**: Download buttons added to each chart window for saving as PNG images
-  *(See version history v2.2)*
+- **Added Multi-Format Downloads**: Save chart PNGs and export results as Markdown/CSV/JSON  
+  *(See version history v2.2 & v2.4)*
 
 ---
 
@@ -21,8 +23,10 @@
 
 ### 🖥️ Interaction System
 - Dynamic pop-up system (supports selection, confirmation, and input)
-- Drag-and-drop, resizable chart windows
+- Fixed language switcher plus quick buttons for comparison/download/reset
+- Drag-and-drop, resizable chart and result windows  
   *(Note: New result windows have replaced the original console output, with all statistics and charts displayed in independent windows)*
+- Built-in real-time filters in the result window; updates propagate to lists and charts
 - GSAP animation transition effects
 - Real-time progress bar feedback (supports display in both console and page)
 
@@ -39,20 +43,23 @@
   - Overall comparison of creator groups (number of purchases and spending amount)
   - Comparison of work types by creator group
   Comparison results are displayed in a unified comparison chart container in the form of combined bar charts.
-- Smart filtering system (filters secondary data by minimum number of works)
-- Exchange rate conversion system (supports real-time exchange rate modification)
+- **Multi-dimensional Filtering**: Keyword, maker, date, price, and minimum-count filters redraw both lists and charts
+- Exchange rate conversion system (supports real-time modification with language-specific defaults)
+- Quick mode (totals only) and detail mode (fetches genres/tags) are switchable
+- Discontinued works and the timeline view are grouped separately for easier tracing
 
 ### 🛡️ Enhanced Features
 - Automatic page detection and smart jump
 - Independent marking system for discontinued works
 - Data sandbox mode (speeds up statistics by 300%)
 - Crash recovery mechanism (restore via the global command `window.reloadData`)
+- Language switching refreshes the UI instantly and preserves exchange-rate configuration
 
 ### 📦 Output System
-- Support for multiple export formats (MD preview, CSV, console table)
+- Support for multiple export formats (Markdown / CSV / JSON, export individually or all at once)
+- Floating download button plus built-in PNG saving inside each chart window
 - Adaptive display for mobile devices
 - Error log tracing function
-- **Chart Download Feature**: Click the "Save" button in each chart window to export the current chart as a PNG image
 
 ---
 
@@ -68,91 +75,90 @@ Chrome 89+ / Firefox 86+ / Edge 91+
 1. Log in to the [DLsite Purchase Records Page](https://www.dlsite.com/maniax/mypage/userbuy)
 2. Open Developer Tools (F12)
 3. Paste the full code into the Console panel
+4. After running, use the top-right language switcher to adjust UI and rates; use the top-left buttons for compare/download/reset
 
 ## 🔄 Detailed Interaction Flow Explanation
 
 ```mermaid
 graph TD
     A[Script Launch] --> B{Page Detection}
-    B -->|Current page is DLsite| C[Display Welcome Banner]
-    B -->|Not a DLsite page| D[Display Jump Prompt]
+    B -->|On DLsite| C[Show Welcome Banner]
+    B -->|Not on DLsite| D[Prompt to Jump]
     D --> E{User Choice}
-    E -->|Confirm Jump| F[Redirect to Purchase Records Page]
-    E -->|Cancel Operation| G[Script Termination]
+    E -->|Confirm| F[Redirect to Purchase Records Page]
+    E -->|Cancel| G[Stop Script]
     
-    C --> H[Mode Selection Dialog]
-    H --> I{Mode Selection}
-    I -->|Quick Mode| J[Skip Detail Fetching]
-    I -->|Detail Mode| K[Initiate Work Type Selection]
+    C --> H[Render Language Switcher]
+    H --> I[Mode Selection Dialog]
+    I --> J[Mount Download/Compare/Reset Buttons]
+    J --> K{Choose Mode}
+    K -->|Quick Mode| L[Skip Detail Fetching]
+    K -->|Detail Mode| M[Open Work-Type Selector]
     
-    K --> L[Display Type Filter]
-    L --> M{Select Specific Type}
-    M -->|Select 0 (All)| N[Maintain Default URL]
-    M -->|Select Specific Type| O[Modify Request Parameters]
+    M --> N[Pop Up Type Filter]
+    N --> O{Choose Specific Type}
+    O -->|Select 0 (All)| P[Keep Default URL]
+    O -->|Select Specific Type| Q[Adjust Request Params]
     
-    J --> P[Exchange Rate Setting Dialog]
-    K --> P
-    P --> Q{Need to Modify Exchange Rate?}
-    Q -->|Yes| R[Display Number Input Box]
-    Q -->|No| S[Use Default Exchange Rate 0.04858]
+    L --> R[Exchange Rate Dialog]
+    M --> R
+    R --> S{Edit Rate?}
+    S -->|Yes| T[Number Input]
+    S -->|No| U[Use Language Default Rate]
     
-    R --> T[Input Validation]
-    T -->|Valid Number| U[Update Exchange Rate]
-    T -->|Invalid Input| V[Show Error and Restore Default]
+    T --> V[Validate Input]
+    V -->|Valid| W[Update Rate]
+    V -->|Invalid| X[Show Error and Restore Default]
     
-    U --> W[Start Data Fetching]
-    S --> W
-    W --> X[Display Dual Progress Feedback]
-    X --> Y[[Real-time Progress Bar]]
-    X --> Z[Console Pagination Display]
+    W --> Y[Start Fetching Data]
+    U --> Y
+    Y --> Z[Dual Progress Feedback]
+    Z --> AA[[On-page Progress Bar]]
+    Z --> AB[Console Pagination]
     
-    W --> AA[Data Cleaning Stage]
-    AA --> AB{Are There Discontinued Works?}
-    AB -->|Yes| AC[Independently Mark EOL List]
-    AB -->|No| AD[Proceed to Statistics Stage]
+    Y --> AC[Data Cleaning]
+    AC --> AD{Any Discontinued Works?}
+    AD -->|Yes| AE[Mark EOL List]
+    AD -->|No| AF[Enter Statistics Stage]
     
-    AD --> AE[Filter Threshold Setting]
-    AE --> AF[Enter Minimum Number of Works]
-    AF --> AG[Execute Data Filtering]
+    AF --> AG[Filter Threshold Prompt]
+    AG --> AH[Enter Minimum Works]
+    AH --> AI[Run Data Filtering]
+    AI --> AJ[Result/Chart Configuration Dialog]
+    AJ --> AK{Show Charts?}
+    AK -->|Yes| AL[Load Chart.js Asynchronously]
+    AK -->|No| AM[Skip Chart Rendering]
     
-    AG --> AH[Chart Configuration Dialog]
-    AH --> AI{Display Charts?}
-    AI -->|Yes| AJ[Asynchronously Load Chart.js]
-    AI -->|No| AK[Skip Chart Rendering]
+    AL --> AN[Create Four-Chart Container]
+    AN --> AO[User Interactions]
+    AO --> AP[Switch Chart Type]
+    AO --> AQ[Drag/Resize Windows]
+    AO --> AR[Live Filter Refresh]
     
-    AJ --> AL[Generate Four-Chart Container]
-    AL --> AM[User Interaction Events]
-    AM --> AN[Chart Type Switching]
-    AM --> AO[Window Dragging/Resizing]
+    AM --> AS[Result Export Dialog]
+    AJ --> AS
+    AS --> AT{Save Files?}
+    AT -->|Yes| AU[Choose Markdown/CSV/JSON or All]
+    AT -->|No| AV[Full Console Output]
+    AU --> AW[Generate and Download Files]
     
-    AK --> AP[Results Export Dialog]
-    AH --> AP
-    AP --> AQ{Save File?}
-    AQ -->|Yes| AR[Format Selection]
-    AQ -->|No| AS[Full Console Output]
-    
-    AR --> AT[[MD Preview Window]]
-    AR --> AU[Direct CSV Download]
-    AT --> AV[Interactive Preview]
-    AV --> AW[Confirm Download]
-    
-    AS --> AX[Print Beautified Table]
+    AV --> AX[Print Styled Tables]
     AX --> AY[Expand Timeline Groups]
-    AY --> AZ[Console Collapsed Display]
+    AY --> AZ[Console Collapsed View]
     
     AZ --> BA[Error Detection Module]
-    BA --> BB{Are There Error Logs?}
+    BA --> BB{Any Error Logs?}
     BB -->|Yes| BC[Highlight Error Entries]
-    BB -->|No| BD[Display Success Icon]
+    BB -->|No| BD[Show Success Icon]
     
-    BD --> BE[Display Author Information]
-    BE --> BF[Show Project Address]
-    BF --> BG[Script Execution Ends]
+    BD --> BE[Show Author Info]
+    BE --> BF[Display Project URL]
+    BF --> BG[Script Ends]
     
-    %% New Data Comparison Analysis Flow
-    BG --> BH[Data Comparison Analysis Module Launch]
-    BH --> BI[User Selects Time Periods and Comparison Aspects]
-    BI --> BJ[Generate Comparison Chart (Combined Bar Chart)]
+    %% New Comparison Flow
+    BG --> BH[Launch Comparison Module]
+    BH --> BI[Select Periods and Aspects]
+    BI --> BJ[Generate Combined Bar Charts]
 ```
 
 ### Key Interaction Node Explanations
@@ -205,15 +211,17 @@ graph TD
 #### 5. File Export Flow
 ```mermaid
 graph LR
-    A[Export Triggered] --> B{Format Selection}
-    B --> C[MD Preview]
-    B --> D[Direct CSV Export]
-    B --> E[Combined Export]
-    C --> F[Blob Generation]
-    D --> F
-    E --> F
-    F --> G[Virtual Download]
-    G --> H[Memory Release]
+    A[Export Triggered] --> B{Choose Format}
+    B --> C[Markdown]
+    B --> D[CSV]
+    B --> E[JSON]
+    B --> F[Download All]
+    C --> G[Generate File]
+    D --> G
+    E --> G
+    F --> G
+    G --> H[Trigger Download]
+    H --> I[Release Object URLs]
 ```
 
 ---
@@ -228,7 +236,7 @@ graph LR
 
 ### Advanced Settings
 ```markdown
-1. Exchange Rate Calibration: Default is 1 CNY = 0.04858 JPY, supports up to 6 decimal places
+1. Exchange Rate Calibration: Built-in defaults CNY(0.048) / USD(0.0064) / JPY(1), independently stored per language
 2. Filter Threshold: Entering a number N automatically filters categories with fewer works
 3. Chart Configuration: Each chart independently remembers its display type (bar/pie chart)
 ```
@@ -309,8 +317,8 @@ graph TB
     end
     
     subgraph Persistence Layer
-        C[Data Output] --> C1[Blob Storage]
-        C --> C2[FileSaver.js]
+        C[Data Output] --> C1[Blob / URL Objects]
+        C --> C2[Markdown / CSV / JSON Export]
         C --> C3[Console.table]
     end
     
@@ -330,7 +338,7 @@ graph TB
 | **Chart.js**               | 4.4.0   | Data Visualization    | `drawGenreChart()`, `drawMakerChart()` etc.          |
 | **GSAP**                   | 3.12.0  | Animation Engine      | `animateModalIn()`, `fadeOut()`                      |
 | **DOMParser**              | Native  | DOM Parsing           | `processPage()` data extraction                      |
-| **FileSaver**              | 2.0.5   | File Export           | `exportCSV()` download implementation               |
+| **Blob + URL API**         | Native  | File Export           | `downloadFile()` triggers Markdown/CSV/JSON downloads |
 
 #### Native Technology Applications
 ```markdown
@@ -454,10 +462,9 @@ function debouncedRedraw() {
 2. **Input Validation**
    ```javascript
    // Exchange rate input validation
-   const validateExchangeRate = (input) => {
-     return /^0\.0\d{1,5}$/.test(input) && 
-            parseFloat(input) > 0;
-   };
+   const value = parseFloat(input);
+   const isValid = !Number.isNaN(value) && value > 0;
+   const rate = isValid ? value : defaultRate;
    ```
 
 ### CORS Handling
@@ -474,6 +481,14 @@ function debouncedRedraw() {
 ---
 
 ## 📌 Version History
+
+### v2.4 (2025/04/22)
+- Added JSON export option with a download-all choice
+- Introduced tri-language switcher with remembered exchange rates; UI and charts redraw after language changes
+
+### v2.3 (2025/03/18)
+- Fixed bugs
+- Refined structure and result window with keyword/maker/date/price filters plus compare/download/reset buttons
 
 ### v2.2 (2025/03/08)
 - Added data comparison analysis feature (compares purchases and spending across different time periods)
