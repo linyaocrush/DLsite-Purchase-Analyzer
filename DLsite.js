@@ -719,6 +719,152 @@
     }
   };
 
+  const compareAllAspects = (result, periods, exchangeRate, aspects) => {
+    const filterByPeriod = (works, period) => {
+      return works.filter(work => {
+        const d = new Date(work.date);
+        return d >= period.start && d <= period.end;
+      });
+    };
+
+    const period1Works = filterByPeriod(result.works, periods.period1);
+    const period2Works = filterByPeriod(result.works, periods.period2);
+
+    const countByKey = (works, keyGetter) => {
+      const map = new Map();
+      works.forEach(work => {
+        const key = keyGetter(work);
+        if (!key) return;
+        map.set(key, (map.get(key) || 0) + 1);
+      });
+      return map;
+    };
+
+    const collectGenres = work => {
+      const genres = [];
+      if (Array.isArray(work.mainGenre) && work.mainGenre.length > 0) {
+        genres.push(...work.mainGenre);
+      }
+      if (work.genre) genres.push(work.genre);
+      return genres;
+    };
+
+    const countGenres = works => {
+      const map = new Map();
+      works.forEach(work => {
+        const genres = collectGenres(work);
+        if (genres.length === 0) return;
+        genres.forEach(g => {
+          map.set(g, (map.get(g) || 0) + 1);
+        });
+      });
+      return map;
+    };
+
+    const topEntries = (map, limit = 10) => {
+      return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit);
+    };
+
+    if (aspects.prefType) {
+      const genres1 = countGenres(period1Works);
+      const genres2 = countGenres(period2Works);
+      const allGenres = new Set([...genres1.keys(), ...genres2.keys()]);
+      const labels = [...allGenres];
+      const data1 = labels.map(label => genres1.get(label) || 0);
+      const data2 = labels.map(label => genres2.get(label) || 0);
+      charts.drawCombinedBarChart(
+        "不同类型作品偏好对比",
+        labels,
+        data1,
+        data2,
+        "时间段 1 作品数",
+        "时间段 2 作品数",
+        "作品数",
+        `prefType_${Date.now()}`
+      );
+    }
+
+    if (aspects.prefMaker || aspects.makerOverall) {
+      const makers1 = countByKey(period1Works, work => work.makerName || "未知");
+      const makers2 = countByKey(period2Works, work => work.makerName || "未知");
+      const allMakers = [...new Set([...makers1.keys(), ...makers2.keys()])];
+      const combinedSorted = allMakers
+        .map(maker => ({ maker, total: (makers1.get(maker) || 0) + (makers2.get(maker) || 0) }))
+        .sort((a, b) => b.total - a.total);
+      const topMakers = combinedSorted.slice(0, 10).map(entry => entry.maker);
+      if (aspects.prefMaker && topMakers.length > 0) {
+        const data1 = topMakers.map(maker => makers1.get(maker) || 0);
+        const data2 = topMakers.map(maker => makers2.get(maker) || 0);
+        charts.drawCombinedBarChart(
+          "不同制作组偏好对比",
+          topMakers,
+          data1,
+          data2,
+          "时间段 1 作品数",
+          "时间段 2 作品数",
+          "作品数",
+          `prefMaker_${Date.now()}`
+        );
+      }
+
+      if (aspects.makerOverall) {
+        const summarize = works => ({
+          count: works.length,
+          totalPrice: works.reduce((sum, w) => sum + (w.price || 0), 0)
+        });
+        const sum1 = summarize(period1Works);
+        const sum2 = summarize(period2Works);
+        const summaryText =
+          `时间段 1：\n  作品数：${sum1.count}\n  总价：${sum1.totalPrice} 日元 (${(sum1.totalPrice * exchangeRate).toFixed(2)} 人民币)\n\n` +
+          `时间段 2：\n  作品数：${sum2.count}\n  总价：${sum2.totalPrice} 日元 (${(sum2.totalPrice * exchangeRate).toFixed(2)} 人民币)`;
+        modal.customAlert(summaryText);
+      }
+    }
+
+    if (aspects.makerType) {
+      const makerGenreMap = works => {
+        const outer = new Map();
+        works.forEach(work => {
+          const maker = work.makerName || "未知";
+          const genres = collectGenres(work);
+          if (genres.length === 0) return;
+          if (!outer.has(maker)) outer.set(maker, new Map());
+          const inner = outer.get(maker);
+          genres.forEach(g => inner.set(g, (inner.get(g) || 0) + 1));
+        });
+        return outer;
+      };
+
+      const map1 = makerGenreMap(period1Works);
+      const map2 = makerGenreMap(period2Works);
+      const makerTotals = new Map();
+      const addTotals = (map) => {
+        map.forEach((genreMap, maker) => {
+          const total = [...genreMap.values()].reduce((s, c) => s + c, 0);
+          makerTotals.set(maker, (makerTotals.get(maker) || 0) + total);
+        });
+      };
+      addTotals(map1);
+      addTotals(map2);
+      const topMakers = [...makerTotals.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(entry => entry[0]);
+
+      let text = "制作组作品类型对比（前 5 制作组）\n\n";
+      topMakers.forEach(maker => {
+        const g1 = map1.get(maker) || new Map();
+        const g2 = map2.get(maker) || new Map();
+        const allGenres = new Set([...g1.keys(), ...g2.keys()]);
+        text += `${maker}:\n`;
+        allGenres.forEach(genre => {
+          const v1 = g1.get(genre) || 0;
+          const v2 = g2.get(genre) || 0;
+          text += `  ${genre}: 时间段1 ${v1} / 时间段2 ${v2}\n`;
+        });
+        text += "\n";
+      });
+      modal.customAlert(text);
+    }
+  };
+
   const dataProcessor = {
     async fetchUrlAsync(url) {
       try {
