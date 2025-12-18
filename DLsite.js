@@ -84,6 +84,37 @@
           setTimeout(callback, 200);
         }, 10);
       }
+    },
+    cleanElement(element) {
+      if (!element) return;
+      if (element.parentNode) {
+        element.parentNode.removeChild(element);
+      }
+    }
+  };
+
+  const cache = {
+    defaultTtl: 86400000,
+    get(key) {
+      const item = localStorage.getItem(key);
+      if (!item) return null;
+      try {
+        const { data, expire } = JSON.parse(item);
+        if (!expire || expire <= Date.now()) {
+          localStorage.removeItem(key);
+          return null;
+        }
+        return data;
+      } catch (e) {
+        localStorage.removeItem(key);
+        return null;
+      }
+    },
+    set(key, data, ttl = this.defaultTtl) {
+      localStorage.setItem(key, JSON.stringify({
+        data,
+        expire: Date.now() + ttl
+      }));
     }
   };
 
@@ -876,6 +907,26 @@
   };
 
   const charts = {
+    chartInstances: new Map(),
+    getChartType(key) {
+      const chart = this.chartInstances.get(key);
+      return chart ? chart.config.type : null;
+    },
+    destroyChart(key) {
+      const chart = this.chartInstances.get(key);
+      if (chart) {
+        chart.destroy();
+        this.chartInstances.delete(key);
+      }
+    },
+    destroyAllCharts() {
+      this.chartInstances.forEach(chart => chart.destroy());
+      this.chartInstances.clear();
+    },
+    setChart(key, chartInstance) {
+      this.destroyChart(key);
+      this.chartInstances.set(key, chartInstance);
+    },
     createChartContainer(id, top, left, width = "500px", height = "400px", title = id) {
       let container = document.getElementById(id);
       if (!container) {
@@ -909,7 +960,7 @@
         saveButton.style.right = "5px";
         saveButton.style.zIndex = "101";
         saveButton.setAttribute("aria-label", i18n.t("save"));
-        saveButton.addEventListener("click", () => {
+        ui.addManagedListener(saveButton, "click", () => {
           const canvas = container.querySelector("canvas");
           if(canvas){
             const url = canvas.toDataURL("image/png");
@@ -925,7 +976,7 @@
         hideButton.style.right = "60px";
         hideButton.style.zIndex = "101";
         hideButton.setAttribute("aria-label", i18n.t("hide"));
-        hideButton.addEventListener("click", () => {
+        ui.addManagedListener(hideButton, "click", () => {
           container.style.display = "none";
           let hiddenContainer = document.getElementById("hiddenChartsContainer");
           if (!hiddenContainer) {
@@ -936,6 +987,7 @@
             hiddenContainer.style.top = "10px";
             hiddenContainer.style.zIndex = "110000";
             document.body.appendChild(hiddenContainer);
+            ui.trackElement(hiddenContainer);
           }
           const restoreButton = document.createElement("button");
           restoreButton.textContent = container.dataset.title || container.id;
@@ -943,20 +995,21 @@
           restoreButton.style.display = "block";
           restoreButton.style.marginBottom = "5px";
           restoreButton.setAttribute("aria-label", container.dataset.title || container.id);
-          restoreButton.addEventListener("click", () => {
+          ui.addManagedListener(restoreButton, "click", () => {
             container.style.display = "block";
             hiddenContainer.removeChild(restoreButton);
           });
           hiddenContainer.appendChild(restoreButton);
         });
         container.appendChild(hideButton);
-        container.addEventListener("mousedown", () => {
+        ui.addManagedListener(container, "mousedown", () => {
           container.style.zIndex = ui.currentZIndex++;
         });
         const contentDiv = document.createElement("div");
         contentDiv.className = "chart-content";
         container.appendChild(contentDiv);
         utils.makeDraggable(container, dragButton);
+        ui.trackElement(container);
         return container;
       }
       return container;
@@ -984,7 +1037,6 @@
       canvas.style.height = "calc(100% - 30px)";
       contentDiv.appendChild(canvas);
       const ctx = canvas.getContext("2d");
-      if (window.genreChartObj) { window.genreChartObj.destroy(); }
       let backgroundColors, borderColors, options;
       if (currentType === 'pie') {
         backgroundColors = filteredGenreCount.map((_, i) => `hsl(${(i * 360 / filteredGenreCount.length)}, 70%, 70%)`);
@@ -1007,7 +1059,7 @@
           modal.customAlert(content);
         }
       };
-      window.genreChartObj = new Chart(ctx, {
+      charts.setChart("genreChart", new Chart(ctx, {
         type: currentType,
         data: {
           labels: filteredGenreCount.map(item => item[0]),
@@ -1020,11 +1072,11 @@
           }]
         },
         options: options
-      });
+      }));
       setTimeout(() => {
         const btn = document.getElementById("toggleGenreChartBtn");
         if (btn) {
-          btn.addEventListener("click", () => {
+          ui.addManagedListener(btn, "click", () => {
             const newType = currentType === 'bar' ? 'pie' : 'bar';
             charts.drawGenreChart(filteredGenreCount, works, newType);
           });
@@ -1054,7 +1106,6 @@
       canvas.style.height = "calc(100% - 30px)";
       contentDiv.appendChild(canvas);
       const ctx = canvas.getContext("2d");
-      if (window.makerChartObj) { window.makerChartObj.destroy(); }
       let backgroundColors, borderColors, options;
       if (currentType === 'pie') {
         backgroundColors = filteredMakerCount.map((_, i) => `hsl(${(i * 360 / filteredMakerCount.length)}, 70%, 70%)`);
@@ -1077,7 +1128,7 @@
           modal.customAlert(content);
         }
       };
-      window.makerChartObj = new Chart(ctx, {
+      charts.setChart("makerChart", new Chart(ctx, {
         type: currentType,
         data: {
           labels: filteredMakerCount.map(item => item[0]),
@@ -1090,11 +1141,11 @@
           }]
         },
         options: options
-      });
+      }));
       setTimeout(() => {
         const btn = document.getElementById("toggleMakerChartBtn");
         if (btn) {
-          btn.addEventListener("click", () => {
+          ui.addManagedListener(btn, "click", () => {
             const newType = currentType === 'bar' ? 'pie' : 'bar';
             charts.drawMakerChart(filteredMakerCount, works, newType);
           });
@@ -1122,7 +1173,6 @@
       canvas.style.height = "calc(100% - 30px)";
       contentDiv.appendChild(canvas);
       const ctx = canvas.getContext("2d");
-      if (window.timelineChartObj) { window.timelineChartObj.destroy(); }
       const options = {
         scales: {
           x: { title: { display: true, text: i18n.t("purchaseDate") } },
@@ -1141,7 +1191,7 @@
           }
         }
       };
-      window.timelineChartObj = new Chart(ctx, {
+      charts.setChart("timelineChart", new Chart(ctx, {
         type: 'line',
         data: {
           labels: sortedDates,
@@ -1155,7 +1205,7 @@
           }]
         },
         options: options
-      });
+      }));
     },
     drawCumulativeChart(works) {
       const groups = {};
@@ -1180,7 +1230,6 @@
       canvas.style.height = "calc(100% - 30px)";
       contentDiv.appendChild(canvas);
       const ctx = canvas.getContext("2d");
-      if (window.cumulativeChartObj) { window.cumulativeChartObj.destroy(); }
       const options = {
         scales: {
           x: { title: { display: true, text: i18n.t("purchaseDate") } },
@@ -1200,7 +1249,7 @@
           }
         }
       };
-      window.cumulativeChartObj = new Chart(ctx, {
+      charts.setChart("cumulativeChart", new Chart(ctx, {
         type: 'line',
         data: {
           labels: sortedDates,
@@ -1214,7 +1263,7 @@
           }]
         },
         options: options
-      });
+      }));
     },
     drawCombinedBarChart(title, labels, data1, data2, datasetLabel1, datasetLabel2, yAxisLabel, uniqueKey) {
       if(ui.existingComparisonCharts[uniqueKey]) {
@@ -1238,7 +1287,7 @@
       canvas.style.height = "calc(100% - 30px)";
       contentDiv.appendChild(canvas);
       const ctx = canvas.getContext("2d");
-      new Chart(ctx, {
+      charts.setChart(containerId, new Chart(ctx, {
         type: 'bar',
         data: {
           labels: labels,
@@ -1272,7 +1321,7 @@
             }
           }
         }
-      });
+      }));
     }
   };
 
@@ -1430,11 +1479,15 @@
   };
 
   const dataProcessor = {
-    async fetchUrlAsync(url) {
+    async fetchUrlAsync(url, { ttl = cache.defaultTtl } = {}) {
+      const cached = cache.get(url);
+      if (cached) return cached;
       try {
         const response = await fetch(url);
         if (!response.ok) throw new Error(response.statusText);
-        return await response.text();
+        const text = await response.text();
+        cache.set(url, text, ttl);
+        return text;
       } catch (e) {
         ui.errorLogs.push("Error fetching " + url + ": " + e);
         return "";
@@ -1675,7 +1728,7 @@
       downloadBtn.style.left = "10px";
       downloadBtn.style.zIndex = "100001";
       downloadBtn.setAttribute("aria-label", i18n.t("download"));
-      downloadBtn.addEventListener("click", async () => {
+      ui.addManagedListener(downloadBtn, "click", async () => {
         const choice = await modal.customChoice(i18n.t("downloadFormatPrompt"), [
           { label: i18n.t("downloadMd"), value: "md" },
             { label: i18n.t("downloadCsv"), value: "csv" },
@@ -1697,6 +1750,7 @@
 
       });
       document.body.appendChild(downloadBtn);
+      ui.trackElement(downloadBtn);
     }
   };
 
@@ -1704,7 +1758,21 @@
     currentZIndex: 100001,
     comparisonCounter: 1,
     existingComparisonCharts: {},
+    managedListeners: [],
+    trackedElements: new Set(),
     errorLogs: [],
+    addManagedListener(element, event, handler, options) {
+      element.addEventListener(event, handler, options);
+      this.managedListeners.push(() => element.removeEventListener(event, handler, options));
+    },
+    clearManagedListeners() {
+      this.managedListeners.forEach(off => off());
+      this.managedListeners = [];
+    },
+    trackElement(element) {
+      if (element) this.trackedElements.add(element);
+      return element;
+    },
     injectStyles() {
       const style = document.createElement("style");
       style.id = "DLsiteStyle";
@@ -1992,9 +2060,9 @@
             });
           }
           if (appState.detailMode) {
-            charts.drawGenreChart(appState.filteredGenreCount, appState.result.works, window.genreChartObj ? window.genreChartObj.config.type : "bar");
+            charts.drawGenreChart(appState.filteredGenreCount, appState.result.works, charts.getChartType("genreChart") || "bar");
           }
-          charts.drawMakerChart(appState.filteredMakerCount, appState.result.works, window.makerChartObj ? window.makerChartObj.config.type : "bar");
+          charts.drawMakerChart(appState.filteredMakerCount, appState.result.works, charts.getChartType("makerChart") || "bar");
           charts.drawTimelineChart(appState.result.works);
           charts.drawCumulativeChart(appState.result.works);
         }
@@ -2028,7 +2096,7 @@
         if (lang === i18n.current) option.selected = true;
         select.appendChild(option);
       });
-      select.addEventListener("change", async () => {
+      ui.addManagedListener(select, "change", async () => {
         i18n.setLanguage(select.value);
         utils.styledLog(i18n.t("languageChanged", { lang: i18n.languages[select.value].name }), "color: #1e88e5; font-weight: bold;", "info");
         await ui.rebuildAfterLanguageChange();
@@ -2036,6 +2104,7 @@
       switcher.appendChild(label);
       switcher.appendChild(select);
       document.body.appendChild(switcher);
+      ui.trackElement(switcher);
     },
     addCompareButton(result, exchangeRate) {
       const compareBtn = document.createElement("button");
@@ -2047,7 +2116,7 @@
       compareBtn.style.left = "10px";
       compareBtn.style.zIndex = "100001";
       compareBtn.setAttribute("aria-label", i18n.t("compare"));
-      compareBtn.addEventListener("click", async () => {
+      ui.addManagedListener(compareBtn, "click", async () => {
         let availableDates = [...new Set(result.works.map(work => new Date(work.date).toISOString().slice(0,10)))].sort();
         const periods = await modal.customSelectPeriods(availableDates);
         if (periods) {
@@ -2055,6 +2124,7 @@
         }
       });
       document.body.appendChild(compareBtn);
+      ui.trackElement(compareBtn);
     },
     addResetButton() {
       const resetBtn = document.createElement("button");
@@ -2068,7 +2138,7 @@
       resetBtn.style.color = "white";
       resetBtn.style.zIndex = "100002";
       resetBtn.setAttribute("aria-label", i18n.t("reset"));
-      resetBtn.addEventListener("click", () => {
+      ui.addManagedListener(resetBtn, "click", () => {
         cleanup();
         const injectedStyle = document.getElementById("DLsiteStyle");
         if (injectedStyle && injectedStyle.parentNode) {
@@ -2076,26 +2146,30 @@
         }
       });
       document.body.appendChild(resetBtn);
+      ui.trackElement(resetBtn);
     }
   };
 
   const cleanup = () => {
+    ui.clearManagedListeners();
+    charts.destroyAllCharts();
     const ids = [
       "progressBar", "chartContainer1", "chartContainer2", "chartContainer3",
       "chartContainer4", "resultWindow", "comparisonChartsContainer",
-      "hiddenChartsContainer", "downloadBtn", "compareBtn", "resetBtn"
+      "hiddenChartsContainer", "downloadBtn", "compareBtn", "resetBtn", "languageSwitcher"
     ];
     ids.forEach(id => {
       const elem = document.getElementById(id);
-      if (elem && elem.parentNode) {
+      if (elem) {
         try {
-          elem.parentNode.removeChild(elem);
+          utils.cleanElement(elem);
         } catch(e) {
           console.warn(e);
         }
       }
     });
-    window.genreChartObj = window.makerChartObj = window.timelineChartObj = window.cumulativeChartObj = null;
+    ui.trackedElements.forEach(elem => utils.cleanElement(elem));
+    ui.trackedElements.clear();
     ui.existingComparisonCharts = {};
   };
 
@@ -2503,11 +2577,11 @@
         });
       }
     };
-
+    
     const updateChartsWithFilteredData = (works, genreCountArr, makerCountArr) => {
       if (typeof Chart === "undefined") return;
-      const genreType = window.genreChartObj ? window.genreChartObj.config.type : "bar";
-      const makerType = window.makerChartObj ? window.makerChartObj.config.type : "bar";
+      const genreType = charts.getChartType("genreChart") || "bar";
+      const makerType = charts.getChartType("makerChart") || "bar";
       if (document.getElementById("chartContainer1")) {
         charts.drawGenreChart(genreCountArr, works, genreType);
       }
