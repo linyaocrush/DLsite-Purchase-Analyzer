@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         DLsite Purchase Analyzer (Userscript)
-// @namespace    https://github.com/
+// @namespace    https://github.com/linyaocrush/DLsite-Purchase-Analyzer
 // @version      1.0.0
 // @description  Run the DLsite purchase analyzer via a Tampermonkey-style menu with customizable defaults.
 // @match        *://*/*
