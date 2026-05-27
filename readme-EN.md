@@ -3,7 +3,7 @@
 # DLsite Purchase Analyzer
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-2.4-green.svg)](#version-history)
+[![Version](https://img.shields.io/badge/Version-3.0-green.svg)](#version-history)
 
 **Deep analysis of your DLsite purchase history — visual charts, interactive filters, multi-format export**
 
@@ -126,9 +126,31 @@ DLsite.js (single-file IIFE, ~2600 lines)
 
 ## Version History
 
-| Version | Date | Changes |
-|:-------:|:----:|---------|
-| **v2.4** | 2025/04/22 | Added JSON export with download-all; trilingual switcher + exchange rate memory |
+### v3.0 (2025/05/27) — Code Quality & Performance Refactoring
+
+<details>
+<summary><strong>Click to expand full changelog</strong></summary>
+
+#### Performance
+- `i18n.t()` template replacement: reduced from N regex creations per call to 1, lowering GC pressure in high-frequency rendering
+- Unified Chart.js CDN loading into `charts.loadChartJS()` single entry point, eliminating duplicate injection logic
+
+#### Bug Fixes
+- **Memory leak**: `utils.makeDraggable`'s document-level mousemove/mouseup listeners are now properly registered in the cleanup system, preventing accumulation on re-run
+- **Pie chart toggle broken**: Fixed bar/pie chart toggle button not responding after refactoring
+
+#### Code Refactoring
+- Extracted generic `drawBarPieChart()` method — `drawGenreChart` / `drawMakerChart` reduced from ~130 lines of duplicate code to 4-line delegates
+- Extracted `utils.groupByDay()` utility, eliminating duplicate date-grouping logic in `drawTimelineChart`, `drawCumulativeChart`, `generateMarkdown`, `generateCSV`, and `renderSections`
+- Merged `customAlert` and `customAlertWithExtraInfo` into single function `customAlert(message, extraInfo?)`
+- Decoupled `dataProcessor` from `ui.errorLogs` — now injected via `fetchAllPages` parameter
+- Fixed duplicate `querySelector` calls on the same selector in `processPage`
+- Fixed inconsistent indentation in `downloadContent.generateJSON` / `addDownloadButton`
+- Net reduction of ~100 lines of code (2687 → 2584)
+
+</details>
+
+### v2.4 (2025/04/22)
 | **v2.3** | 2025/03/18 | Result window filters (keyword/maker/date/price) + compare/download/reset buttons |
 | **v2.2** | 2025/03/08 | Period comparison analysis; chart PNG download |
 | **v2.1** | 2025/03/07 | Floating result window replacing console output |

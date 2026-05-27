@@ -3,7 +3,7 @@
 # DLsite 購入分析ツール
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-2.4-green.svg)](#バージョン履歴)
+[![Version](https://img.shields.io/badge/Version-3.0-green.svg)](#バージョン履歴)
 
 **DLsite の購入記録を深度分析 — 可視化チャート、インタラクティブフィルター、多形式エクスポート**
 
@@ -126,9 +126,31 @@ DLsite.js（単一ファイル IIFE、約 2600 行）
 
 ## バージョン履歴
 
-| バージョン | 日付 | 更新内容 |
-|:---------:|:----:|----------|
-| **v2.4** | 2025/04/22 | JSON エクスポートと一括ダウンロード追加；3言語切替 + 為替記憶 |
+### v3.0 (2025/05/27) — コード品質・パフォーマンスリファクタリング
+
+<details>
+<summary><strong>完整な更新内容を展開</strong></summary>
+
+#### パフォーマンス最適化
+- `i18n.t()` テンプレート置換：呼び出し毎に N 個の正規表現生成から 1 個に削減、高頻度レンダリング時の GC 負荷を軽減
+- Chart.js CDN 読み込みを `charts.loadChartJS()` に統一し、重複インジェクションを排除
+
+#### バグ修正
+- **メモリリーク**：`utils.makeDraggable` の `document` レベル mousemove/mouseup リスナーがクリーンアップシステムに正しく登録されるよう修正
+- **円グラフ切替不能**：リファクタリング後に棒グラフ/円グラフ切替ボタンが動作しない問題を修正
+
+#### コードリファクタリング
+- 汎用 `drawBarPieChart()` メソッドを抽出、`drawGenreChart` / `drawMakerChart` を約 130 行の重複コードから 4 行の委譲呼び出しに削減
+- `utils.groupByDay()` ユーティリティを抽出し、`drawTimelineChart`・`drawCumulativeChart`・`generateMarkdown`・`generateCSV`・`renderSections` の 5 箇所の重複する日付グルーピングロジックを排除
+- `customAlert` と `customAlertWithExtraInfo` を `customAlert(message, extraInfo?)` に統合
+- `dataProcessor` が `ui.errorLogs` に直接依存しなくなり、`fetchAllPages` のパラメータ経由で注入する設計に変更
+- `processPage` で同一セレクタの `querySelector` が連続して 2 回呼ばれていた問題を修正
+- `downloadContent` モジュール内の `generateJSON` / `addDownloadButton` のインデント不整合を修正
+- コード総量を約 100 行削減（2687 → 2584）
+
+</details>
+
+### v2.4 (2025/04/22)
 | **v2.3** | 2025/03/18 | 結果ウィンドウにフィルター（キーワード/サークル/日付/価格）+ 比較/ダウンロード/リセット追加 |
 | **v2.2** | 2025/03/08 | 期間比較分析機能追加；チャート PNG ダウンロード追加 |
 | **v2.1** | 2025/03/07 | フローティング結果ウィンドウ追加、コンソール出力を置換 |

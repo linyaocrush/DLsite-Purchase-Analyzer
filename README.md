@@ -3,7 +3,7 @@
 # DLsite 购买分析工具
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-2.4-green.svg)](#版本历史)
+[![Version](https://img.shields.io/badge/Version-3.0-green.svg)](#版本历史)
 
 **深度分析你的 DLsite 购买记录 — 可视化图表、交互式筛选、多格式导出**
 
@@ -126,9 +126,31 @@ DLsite.js（单文件 IIFE，约 2600 行）
 
 ## 版本历史
 
-| 版本 | 日期 | 更新内容 |
-|:----:|:----:|----------|
-| **v2.4** | 2025/04/22 | 新增 JSON 导出与一键全下载；三语切换器 + 汇率记忆 |
+### v3.0 (2025/05/27) — 代码质量与性能重构
+
+<details>
+<summary><strong>点击展开完整更新内容</strong></summary>
+
+#### 性能优化
+- `i18n.t()` 模板替换：每次调用从创建 N 个正则优化为仅创建 1 个，高频渲染场景下减少 GC 压力
+- Chart.js CDN 加载统一为 `charts.loadChartJS()` 单一入口，消除重复注入逻辑
+
+#### Bug 修复
+- **内存泄漏**：`utils.makeDraggable` 的 `document` 级 mousemove/mouseup 监听器现在正确注册到清理系统，re-run 时不再累积
+- **饼状图切换失效**：修复重构后柱状图/饼状图切换按钮点击无反应的问题
+
+#### 代码重构
+- 提取通用 `drawBarPieChart()` 方法，`drawGenreChart` / `drawMakerChart` 从 ~130 行重复代码缩减为 4 行委托调用
+- 提取 `utils.groupByDay()` 工具函数，消除 `drawTimelineChart`、`drawCumulativeChart`、`generateMarkdown`、`generateCSV`、`renderSections` 五处重复的日期分组逻辑
+- 合并 `customAlert` 与 `customAlertWithExtraInfo` 为单一函数 `customAlert(message, extraInfo?)`
+- `dataProcessor` 不再直接依赖 `ui.errorLogs`，改为通过 `fetchAllPages` 参数注入，解除模块耦合
+- 修复 `processPage` 中 `querySelector` 对同一选择器连续调用两次的问题
+- 修复 `downloadContent` 模块内 `generateJSON` / `addDownloadButton` 缩进不一致
+- 代码总量减少约 100 行（2687 → 2584）
+
+</details>
+
+### v2.4 (2025/04/22)
 | **v2.3** | 2025/03/18 | 结果窗口新增筛选器（关键词/制作组/日期/价格）+ 对比/下载/重置按钮 |
 | **v2.2** | 2025/03/08 | 新增时间段对比分析功能；新增图表 PNG 下载 |
 | **v2.1** | 2025/03/07 | 新增浮动结果窗口，替代控制台输出 |
