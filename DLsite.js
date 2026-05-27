@@ -97,9 +97,10 @@
     },
     groupByDay(works, reducer, initial) {
       const groups = {};
+      const cloneInitial = (v) => Array.isArray(v) ? v.slice() : v;
       works.forEach(work => {
         const day = new Date(work.date).toISOString().slice(0, 10);
-        groups[day] = reducer(groups[day] !== undefined ? groups[day] : initial, work);
+        groups[day] = reducer(groups[day] !== undefined ? groups[day] : cloneInitial(initial), work);
       });
       const sortedDates = Object.keys(groups).sort();
       return { groups, sortedDates };
@@ -570,26 +571,19 @@
     },
     async fetchExchangeRates() {
       const cached = cache.get("frankfurter_rates");
-      if (cached) {
-        console.log("[汇率] 使用缓存:", cached);
-        return cached;
-      }
-      console.log("[汇率] 正在请求 Frankfurter API...");
+      if (cached) return cached;
       try {
         const res = await fetch("https://api.frankfurter.dev/v1/latest?from=JPY&to=CNY,USD");
-        console.log("[汇率] API 响应状态:", res.status, res.statusText);
         if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
         const data = await res.json();
-        console.log("[汇率] API 返回数据:", data);
         if (!data.rates || !data.rates.CNY || !data.rates.USD) {
           throw new Error("API 返回数据格式异常: " + JSON.stringify(data));
         }
         const rates = { CNY: data.rates.CNY, USD: data.rates.USD, date: data.date };
-        cache.set("frankfurter_rates", rates, 86400000);
-        console.log("[汇率] 已缓存汇率:", rates);
+        cache.set("frankfurter_rates", rates);
         return rates;
       } catch (e) {
-        console.warn("[汇率] API 请求失败，使用内置默认值:", e);
+        utils.styledLog(`⚠ 汇率 API 请求失败，使用内置默认值: ${e}`, "color: #ff8c00;", "warn");
         return { CNY: 0.048, USD: 0.0064, date: "fallback" };
       }
     },
