@@ -3,7 +3,7 @@
 # DLsite Purchase Analyzer
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-3.0-green.svg)](#version-history)
+[![Version](https://img.shields.io/badge/Version-3.0-green.svg)]()
 
 **Deep analysis of your DLsite purchase history — visual charts, interactive filters, multi-format export**
 
@@ -15,12 +15,13 @@
 
 ## Quick Start
 
+> [!tip]
+> Browser requirement: Chrome 89+ / Firefox 86+ / Edge 91+
+
 1. Log in to the [DLsite Purchase History](https://www.dlsite.com/maniax/mypage/userbuy) page
-2. Press `F12` to open DevTools → Console tab
+2. Press `F12` to open DevTools → **Console** tab
 3. Paste the full contents of `DLsite.js` and press Enter
 4. Follow the on-screen prompts
-
-> Browser requirement: Chrome 89+ / Firefox 86+ / Edge 91+
 
 ---
 
@@ -31,19 +32,19 @@
 <td width="50%">
 
 ### Analysis
-- **4 chart types**: Genre distribution, maker ranking, daily trend, cumulative spend (bar/pie toggle)
-- **Period comparison**: Pick two time periods and compare genre preferences, maker preferences, spending, and more
-- **Real-time filters**: Keyword, maker, date range, price — tables and charts update instantly
-- **Currency conversion**: Built-in CNY / USD / JPY defaults, fully customizable
+- **4 chart types** — Genre distribution, maker ranking, daily trend, cumulative spend (bar/pie toggle)
+- **Period comparison** — Pick two time periods and compare genre preferences, maker preferences, spending
+- **Real-time filters** — Keyword, maker, date range, price — tables and charts update instantly
+- **Currency conversion** — Built-in CNY / USD / JPY defaults, fully customizable
 
 </td>
 <td width="50%">
 
 ### Interaction
-- **Custom modals**: Replace native alert/prompt/confirm with keyboard-navigable dialogs
-- **Draggable windows**: Move and resize chart and result windows
-- **Trilingual UI**: Switch between Chinese, English, and Japanese — exchange rates remembered per language
-- **Progress feedback**: On-page progress bar + console batch updates
+- **Custom modals** — Replace native alert / prompt / confirm with keyboard-navigable dialogs
+- **Draggable windows** — Move and resize chart and result windows
+- **Trilingual UI** — Switch between Chinese, English, and Japanese — rates remembered per language
+- **Progress feedback** — On-page progress bar + console batch updates
 
 </td>
 </tr>
@@ -69,13 +70,13 @@
 | **JSON** | Structured data for further processing |
 | **Chart PNG** | Save button built into each chart window |
 
-One-click download-all option available.
+> One-click download-all option available.
 
 ---
 
 ## Currency Configuration
 
-The script auto-selects a default exchange rate based on UI language:
+The script auto-selects a default exchange rate based on UI language. You can customize the rate at runtime via a modal prompt — each language remembers its own rate independently.
 
 | Language | Currency | Default Rate |
 |:--------:|:--------:|:------------:|
@@ -83,31 +84,32 @@ The script auto-selects a default exchange rate based on UI language:
 | English | USD | 1 JPY = 0.0064 USD |
 | 日本語 | JPY | No conversion |
 
-You can customize the rate at runtime via a modal prompt. Each language remembers its own rate independently.
-
 ---
 
 ## Architecture
 
 ```
 DLsite.js (single-file IIFE, ~2600 lines)
-├── utils          Logging, file download, drag-and-drop, DOM cleanup
-├── cache          localStorage TTL cache (24h)
-├── i18n           Trilingual i18n (zh / en / ja) with template interpolation
-├── appState       Global mutable state
-├── currencyHelper JPY conversion via stored exchange rates
-├── modal          Custom modal system (alert / prompt / confirm / choice / period-select)
-├── charts         Chart.js lifecycle: draggable containers, genre/maker/timeline/cumulative charts
-├── compareAllAspects  Two-period comparison engine
-├── dataProcessor  Paginated fetch (4 concurrent, 2 retries) + HTML table parsing
-├── downloadContent    Markdown / CSV / JSON export
-├── ui             CSS injection, progress bar, language switcher, button management
-├── cleanup        Full teardown (listeners, charts, DOM elements)
-├── main           Entry: page validation → config modals → fetch → aggregate → render
-└── displayResults Result window with real-time filtering + collapsible sections
+│
+├─ utils              Logging · Download · Drag-and-drop · DOM cleanup
+├─ cache              localStorage TTL cache (24h)
+├─ i18n               Trilingual i18n (zh / en / ja)
+├─ appState           Global mutable state
+├─ currencyHelper     JPY conversion via stored exchange rates
+│
+├─ modal              Custom modal system
+├─ charts             Chart.js lifecycle management
+├─ compareAllAspects  Two-period comparison engine
+├─ dataProcessor      Paginated fetch (4 concurrent, 2 retries) + HTML parsing
+├─ downloadContent    Markdown / CSV / JSON export
+│
+├─ ui                 CSS injection · Progress bar · Language switcher · Button management
+├─ cleanup            Full teardown (listeners, charts, DOM elements)
+├─ main               Entry: page validation → config → fetch → aggregate → render
+└─ displayResults     Result window: real-time filtering + collapsible sections
 ```
 
-### Runtime Dependencies (CDN)
+### Runtime Dependencies
 
 | Library | Version | Purpose |
 |---------|:-------:|---------|
@@ -121,47 +123,6 @@ DLsite.js (single-file IIFE, ~2600 lines)
 - The script is **re-runnable**: each execution cleans up prior UI and state automatically
 - Failed network requests are retried (up to 2 times); error logs appear at the bottom of the result window
 - Only works on `dlsite.com/maniax/mypage/userbuy` — other pages will prompt a redirect
-
----
-
-## Version History
-
-### v3.0 (2025/05/27) — Code Quality & Performance Refactoring
-
-<details>
-<summary><strong>Click to expand full changelog</strong></summary>
-
-#### Performance
-- `i18n.t()` template replacement: reduced from N regex creations per call to 1, lowering GC pressure in high-frequency rendering
-- Unified Chart.js CDN loading into `charts.loadChartJS()` single entry point, eliminating duplicate injection logic
-
-#### Bug Fixes
-- **Memory leak**: `utils.makeDraggable`'s document-level mousemove/mouseup listeners are now properly registered in the cleanup system, preventing accumulation on re-run
-- **Pie chart toggle broken**: Fixed bar/pie chart toggle button not responding after refactoring
-
-#### Code Refactoring
-- Extracted generic `drawBarPieChart()` method — `drawGenreChart` / `drawMakerChart` reduced from ~130 lines of duplicate code to 4-line delegates
-- Extracted `utils.groupByDay()` utility, eliminating duplicate date-grouping logic in `drawTimelineChart`, `drawCumulativeChart`, `generateMarkdown`, `generateCSV`, and `renderSections`
-- Merged `customAlert` and `customAlertWithExtraInfo` into single function `customAlert(message, extraInfo?)`
-- Decoupled `dataProcessor` from `ui.errorLogs` — now injected via `fetchAllPages` parameter
-- Fixed duplicate `querySelector` calls on the same selector in `processPage`
-- Fixed inconsistent indentation in `downloadContent.generateJSON` / `addDownloadButton`
-- Net reduction of ~100 lines of code (2687 → 2584)
-
-</details>
-
-### v2.4 (2025/04/22)
-| **v2.3** | 2025/03/18 | Result window filters (keyword/maker/date/price) + compare/download/reset buttons |
-| **v2.2** | 2025/03/08 | Period comparison analysis; chart PNG download |
-| **v2.1** | 2025/03/07 | Floating result window replacing console output |
-| **v2.0** | 2025/03/03 | 4-chart system; custom modals replacing native dialogs; drag/resize; GSAP animations |
-| **v1.2** | 2025/02/24 | Enhanced CSV export; optimized console display |
-
----
-
-## License
-
-MIT License
 
 ---
 
