@@ -95,12 +95,11 @@
         element.parentNode.removeChild(element);
       }
     },
-    groupByDay(works, reducer, initial) {
+    groupByDay(works, reducer, factory) {
       const groups = {};
-      const cloneInitial = (v) => Array.isArray(v) ? v.slice() : v;
       works.forEach(work => {
         const day = new Date(work.date).toISOString().slice(0, 10);
-        groups[day] = reducer(groups[day] !== undefined ? groups[day] : cloneInitial(initial), work);
+        groups[day] = reducer(groups[day] !== undefined ? groups[day] : factory(), work);
       });
       const sortedDates = Object.keys(groups).sort();
       return { groups, sortedDates };
@@ -125,10 +124,33 @@
       }
     },
     set(key, data, ttl = this.defaultTtl) {
-      localStorage.setItem(key, JSON.stringify({
-        data,
-        expire: Date.now() + ttl
-      }));
+      try {
+        localStorage.setItem(key, JSON.stringify({
+          data,
+          expire: Date.now() + ttl
+        }));
+      } catch (e) {
+        if (e.name === "QuotaExceededError") {
+          this._evictExpired();
+          try {
+            localStorage.setItem(key, JSON.stringify({ data, expire: Date.now() + ttl }));
+          } catch (_) {
+            // silently skip caching when storage is full
+          }
+        }
+      }
+    },
+    _evictExpired() {
+      const now = Date.now();
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        try {
+          const item = JSON.parse(localStorage.getItem(k));
+          if (item && item.expire && item.expire <= now) keysToRemove.push(k);
+        } catch (_) {}
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
     }
   };
 
@@ -615,14 +637,24 @@
   };
 
   const currencyHelper = {
+    _cache: new Map(),
+    _lastLang: null,
     format(amountJPY, exchangeRate) {
+      if (i18n.current !== this._lastLang) {
+        this._cache.clear();
+        this._lastLang = i18n.current;
+      }
       const config = i18n.getCurrencyConfig();
       const rate = typeof exchangeRate === "number" ? exchangeRate : config.rate;
       if (!rate || rate === 1 || i18n.current === "ja") {
         return i18n.t("yenOnly", { yen: amountJPY });
       }
+      const key = `${amountJPY}:${rate}`;
+      if (this._cache.has(key)) return this._cache.get(key);
       const converted = (amountJPY * rate).toFixed(2);
-      return i18n.t("currencyConverted", { yen: amountJPY, converted, currency: config.label });
+      const result = i18n.t("currencyConverted", { yen: amountJPY, converted, currency: config.label });
+      this._cache.set(key, result);
+      return result;
     }
   };
 
@@ -1042,6 +1074,21 @@
       }
       return container;
     },
+    patchChart(chart, newType, data, barColor) {
+      const isPie = newType === 'pie';
+      chart.config.type = newType;
+      const ds = chart.data.datasets[0];
+      ds.backgroundColor = isPie
+        ? data.map((_, i) => `hsl(${(i * 360 / data.length)}, 70%, 70%)`)
+        : barColor.bg;
+      ds.borderColor = isPie
+        ? data.map((_, i) => `hsl(${(i * 360 / data.length)}, 70%, 50%)`)
+        : barColor.border;
+      chart.options.scales = isPie ? {} : { y: { beginAtZero: true } };
+      chart.options.plugins = chart.options.plugins || {};
+      chart.options.plugins.legend = isPie ? { display: true } : { display: false };
+      chart.update();
+    },
     drawBarPieChart(chartKey, containerId, data, works, filterFn, barColor, title, top, left, newType) {
       const currentType = newType || charts.getChartType(chartKey) || "bar";
       const container = charts.createChartContainer(containerId, top, left, "500px", "400px", title);
@@ -1097,8 +1144,12 @@
         options
       }));
       ui.addManagedListener(toggleBtn, "click", () => {
-        const nextType = currentType === 'bar' ? 'pie' : 'bar';
-        charts.drawBarPieChart(chartKey, containerId, data, works, filterFn, barColor, title, top, left, nextType);
+        const chart = charts.chartInstances.get(chartKey);
+        if (!chart) return;
+        const nextType = chart.config.type === 'bar' ? 'pie' : 'bar';
+        charts.patchChart(chart, nextType, data, barColor);
+        toggleBtn.textContent = nextType === 'bar' ? i18n.t("chartSwitchPie") : i18n.t("chartSwitchBar");
+        toggleBtn.setAttribute("aria-label", toggleBtn.textContent);
       });
     },
     drawGenreChart(filteredGenreCount, works, currentType) {
@@ -1118,7 +1169,7 @@
       );
     },
     drawTimelineChart(works) {
-      const { groups, sortedDates } = utils.groupByDay(works, (acc) => acc + 1, 0);
+      const { groups, sortedDates } = utils.groupByDay(works, (acc) => acc + 1, () => 0);
       const counts = sortedDates.map(date => groups[date]);
       const container = charts.createChartContainer("chartContainer3", "550px", "100px", "500px", "400px", i18n.t("chartTimelineTitle"));
       const contentDiv = container.querySelector(".chart-content");
@@ -1168,7 +1219,7 @@
       }));
     },
     drawCumulativeChart(works) {
-      const { groups, sortedDates } = utils.groupByDay(works, (acc, w) => acc + w.price, 0);
+      const { groups, sortedDates } = utils.groupByDay(works, (acc, w) => acc + w.price, () => 0);
       let cumulative = [];
       let total = 0;
       sortedDates.forEach(date => { total += groups[date]; cumulative.push(total); });
@@ -1466,17 +1517,20 @@
       const detailPromises = [];
       trElms.forEach(elm => {
         const work = {};
-        const nameAnchor = elm.querySelector(".work_name a");
+        const nameCell = elm.querySelector(".work_name");
+        const nameAnchor = nameCell.querySelector("a");
         work.url = nameAnchor ? nameAnchor.href : "";
         work.date = elm.querySelector(".buy_date").innerText;
-        work.name = elm.querySelector(".work_name").innerText.trim();
-        work.genre = elm.querySelector(".work_genre span").textContent.trim();
-        const genreAnchor = elm.querySelector(".work_genre a");
+        work.name = nameCell.innerText.trim();
+        const genreCell = elm.querySelector(".work_genre");
+        work.genre = genreCell.querySelector("span").textContent.trim();
+        const genreAnchor = genreCell.querySelector("a");
         work.genreLink = genreAnchor ? genreAnchor.href : "";
         const priceText = elm.querySelector(".work_price").textContent.split(' /')[0];
         work.price = parseInt(priceText.replace(/\D/g, ''));
-        work.makerName = elm.querySelector(".maker_name").innerText.trim();
-        const makerAnchor = elm.querySelector(".maker_name a");
+        const makerCell = elm.querySelector(".maker_name");
+        work.makerName = makerCell.innerText.trim();
+        const makerAnchor = makerCell.querySelector("a");
         work.makerLink = makerAnchor ? makerAnchor.href : "";
         if (detailMode && work.url !== "") {
           detailPromises.push((async (w) => {
@@ -1598,7 +1652,7 @@
       }
       md += `\n`;
       md += `## ${i18n.t("timeline")}\n\n`;
-      const { groups: mdGroups, sortedDates: mdSortedDates } = utils.groupByDay(result.works, (acc, w) => { acc.push(w); return acc; }, []);
+      const { groups: mdGroups, sortedDates: mdSortedDates } = utils.groupByDay(result.works, (acc, w) => { acc.push(w); return acc; }, () => []);
       mdSortedDates.forEach(date => {
           md += `### ${date} (${mdGroups[date].length} ${i18n.t("workCount")})\n\n`;
           md += `| ${i18n.t("workNameLabel")} | ${i18n.t("workMakerLabel")} | ${i18n.t("priceYen", { amount: i18n.t("valueLabel") })} |\n`;
@@ -1639,7 +1693,7 @@
       }
       csv += "\n";
       csv += `${i18n.t("timeline")}\n`;
-      const { groups: csvGroups, sortedDates: csvSortedDates } = utils.groupByDay(result.works, (acc, w) => { acc.push(w); return acc; }, []);
+      const { groups: csvGroups, sortedDates: csvSortedDates } = utils.groupByDay(result.works, (acc, w) => { acc.push(w); return acc; }, () => []);
       csvSortedDates.forEach(date => {
           csv += `${i18n.t("dateLabel", { date })} (${csvGroups[date].length} ${i18n.t("workCount")})\n`;
           csv += `${i18n.t("workNameLabel")},${i18n.t("workMakerLabel")},${i18n.t("priceYen", { amount: i18n.t("valueLabel") })}\n`;
@@ -2490,7 +2544,7 @@
         empty.textContent = i18n.t("noData");
         timelineContent.appendChild(empty);
       } else {
-        const { groups: tlGroups, sortedDates: tlSortedDates } = utils.groupByDay(works, (acc, w) => { acc.push(w); return acc; }, []);
+        const { groups: tlGroups, sortedDates: tlSortedDates } = utils.groupByDay(works, (acc, w) => { acc.push(w); return acc; }, () => []);
         tlSortedDates.forEach(date => {
           const section = document.createElement("div");
           const title = document.createElement("strong");
@@ -2560,15 +2614,21 @@
       updateChartsWithFilteredData(works, counts.filteredGenreCount, counts.filteredMakerCount);
     };
 
+    let filterTimer = null;
+    const debouncedFilter = () => {
+      clearTimeout(filterTimer);
+      filterTimer = setTimeout(applyFilters, 300);
+    };
     [keywordInput, makerSelect, startDateInput, endDateInput, minPriceInput, maxPriceInput].forEach(input => {
-      input.addEventListener("input", applyFilters);
-      input.addEventListener("change", applyFilters);
+      ui.addManagedListener(input, "input", debouncedFilter);
+      ui.addManagedListener(input, "change", debouncedFilter);
     });
-    applyFilterBtn.addEventListener("click", (e) => {
+    ui.addManagedListener(applyFilterBtn, "click", (e) => {
       e.preventDefault();
+      clearTimeout(filterTimer);
       applyFilters();
     });
-    redrawChartsBtn.addEventListener("click", (e) => {
+    ui.addManagedListener(redrawChartsBtn, "click", (e) => {
       e.preventDefault();
       updateChartsWithFilteredData(lastFilteredWorks, lastGenreCount, lastMakerCount);
     });
