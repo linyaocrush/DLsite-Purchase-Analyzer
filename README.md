@@ -76,12 +76,12 @@
 
 ## 汇率配置
 
-脚本根据界面语言自动选择默认汇率，运行时可通过弹窗自定义，修改后按语言独立记忆。
+脚本通过 [Frankfurter API](https://frankfurter.dev/)（欧洲央行数据源）实时获取 JPY → CNY / USD 汇率，结果缓存 24 小时。如 API 不可用，自动降级为内置默认值。运行时可通过弹窗自定义汇率，修改后按语言独立记忆。
 
-| 语言 | 货币 | 默认汇率 |
+| 语言 | 货币 | 数据来源 |
 |:----:|:----:|:--------:|
-| 简体中文 | CNY | 1 JPY = 0.048 CNY |
-| English | USD | 1 JPY = 0.0064 USD |
+| 简体中文 | CNY | Frankfurter API 实时获取 |
+| English | USD | Frankfurter API 实时获取 |
 | 日本語 | JPY | 不转换 |
 
 ---

@@ -76,12 +76,12 @@
 
 ## Currency Configuration
 
-The script auto-selects a default exchange rate based on UI language. You can customize the rate at runtime via a modal prompt — each language remembers its own rate independently.
+The script fetches live JPY → CNY / USD exchange rates from the [Frankfurter API](https://frankfurter.dev/) (powered by ECB data), cached for 24 hours. Falls back to built-in defaults if the API is unavailable. You can customize the rate at runtime — each language remembers its own rate independently.
 
-| Language | Currency | Default Rate |
-|:--------:|:--------:|:------------:|
-| 简体中文 | CNY | 1 JPY = 0.048 CNY |
-| English | USD | 1 JPY = 0.0064 USD |
+| Language | Currency | Source |
+|:--------:|:--------:|:------:|
+| 简体中文 | CNY | Frankfurter API (live) |
+| English | USD | Frankfurter API (live) |
 | 日本語 | JPY | No conversion |
 
 ---

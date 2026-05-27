@@ -158,10 +158,11 @@
           quickViewPrompt: "是否开启快速查看消费金额？（仅统计金额）",
           modifyRatePrompt: "是否需要修改汇率？",
           modifyRateOption: "修改汇率",
-          useDefaultRateOption: "使用默认 (1日元 = 0.048人民币)",
+          useApiRateOption: "使用实时汇率（来源: {source}）",
           enterRatePrompt: "请输入 1 日元兑换人民币的汇率（例如 0.05）：",
+          fallbackRate: "内置默认值",
           invalidRate: "输入无效，使用默认汇率",
-          usingDefaultRate: "使用默认汇率 {rate}",
+          usingApiRate: "使用实时汇率 {rate}",
           excludePrompt: "请输入要排除的最少作品数目（例如输入 3 表示排除数目小于 3 的作品类型）：",
           excludeInvalid: "无效的输入，使用默认值 0（不过滤）",
           excludeEmpty: "未输入数值，使用默认值 0（不过滤）",
@@ -252,7 +253,7 @@
           rateLabel: "汇率",
           currencyEditLabel: "编辑汇率",
           ratePromptUsd: "请输入 1 日元兑换美元的汇率（例如 0.0064）：",
-          modifyRateNotice: "使用默认汇率 {rate}",
+          modifyRateNotice: "使用实时汇率 {rate}",
           dragHandleLabel: "拖动以移动窗口",
           typeAllWorks: "全部作品",
           doujinAll: "同人：所有",
@@ -293,10 +294,11 @@
           quickViewPrompt: "Enable quick spend preview? (only totals)",
           modifyRatePrompt: "Do you want to edit the rate?",
           modifyRateOption: "Edit rate",
-          useDefaultRateOption: "Use default (1 JPY = 0.0064 USD)",
+          useApiRateOption: "Use live rate (source: {source})",
           enterRatePrompt: "Enter the USD per JPY rate (e.g. 0.0064):",
+          fallbackRate: "built-in default",
           invalidRate: "Invalid input, using default rate",
-          usingDefaultRate: "Using default rate {rate}",
+          usingApiRate: "Using live rate {rate}",
           excludePrompt: "Enter minimum works to keep (e.g. 3 removes items under 3):",
           excludeInvalid: "Invalid input, using default 0 (no filter)",
           excludeEmpty: "No input, using default 0 (no filter)",
@@ -387,7 +389,7 @@
           rateLabel: "Exchange rate",
           currencyEditLabel: "Edit rate",
           ratePromptUsd: "Enter the USD per JPY rate (e.g. 0.0064):",
-          modifyRateNotice: "Using default rate {rate}",
+          modifyRateNotice: "Using live rate {rate}",
           dragHandleLabel: "Drag to move window",
           typeAllWorks: "All works",
           doujinAll: "Doujin: all",
@@ -428,10 +430,11 @@
           quickViewPrompt: "金額のみのクイック確認を有効にしますか？",
           modifyRatePrompt: "為替レートを変更しますか？",
           modifyRateOption: "レートを変更",
-          useDefaultRateOption: "デフォルトを使用 (変換なし)",
+          useApiRateOption: "リアルタイムレートを使用（ソース: {source}）",
           enterRatePrompt: "円からの変換は行いません。",
+          fallbackRate: "内蔵デフォルト",
           invalidRate: "入力が無効です。デフォルトを使用します。",
-          usingDefaultRate: "デフォルトレート {rate} を使用",
+          usingApiRate: "リアルタイムレート {rate} を使用",
           excludePrompt: "最低作品数を入力してください（例: 3 なら 3 未満を除外）：",
           excludeInvalid: "無効な入力です。0（フィルターなし）を使用します。",
           excludeEmpty: "未入力です。0（フィルターなし）を使用します。",
@@ -522,7 +525,7 @@
           rateLabel: "為替レート",
           currencyEditLabel: "レートを編集",
           ratePromptUsd: "円はそのまま表示されます。",
-          modifyRateNotice: "デフォルトレート {rate} を使用",
+          modifyRateNotice: "リアルタイムレート {rate} を使用",
           dragHandleLabel: "ドラッグして移動",
           typeAllWorks: "すべての作品",
           doujinAll: "同人：すべて",
@@ -565,12 +568,40 @@
       const pattern = new RegExp(`{(${keys.join("|")})}`, "g");
       return template.replace(pattern, (match, k) => vars[k] !== undefined ? String(vars[k]) : match);
     },
+    async fetchExchangeRates() {
+      const cached = cache.get("frankfurter_rates");
+      if (cached) {
+        console.log("[汇率] 使用缓存:", cached);
+        return cached;
+      }
+      console.log("[汇率] 正在请求 Frankfurter API...");
+      try {
+        const res = await fetch("https://api.frankfurter.dev/v1/latest?from=JPY&to=CNY,USD");
+        console.log("[汇率] API 响应状态:", res.status, res.statusText);
+        if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+        const data = await res.json();
+        console.log("[汇率] API 返回数据:", data);
+        if (!data.rates || !data.rates.CNY || !data.rates.USD) {
+          throw new Error("API 返回数据格式异常: " + JSON.stringify(data));
+        }
+        const rates = { CNY: data.rates.CNY, USD: data.rates.USD, date: data.date };
+        cache.set("frankfurter_rates", rates, 86400000);
+        console.log("[汇率] 已缓存汇率:", rates);
+        return rates;
+      } catch (e) {
+        console.warn("[汇率] API 请求失败，使用内置默认值:", e);
+        return { CNY: 0.048, USD: 0.0064, date: "fallback" };
+      }
+    },
     getCurrencyConfig() {
       const langPack = this.languages[this.current] || this.languages.zh;
+      const cached = cache.get("frankfurter_rates");
+      const rate = cached && cached[langPack.currencyShort] ? cached[langPack.currencyShort] : langPack.defaultRate;
       return {
         label: langPack.currencyLabel,
         short: langPack.currencyShort,
-        rate: langPack.defaultRate
+        rate,
+        apiDate: cached ? cached.date : null
       };
     }
   };
@@ -2131,11 +2162,16 @@
     } else {
       dlurl = dlurl.replace(/type\/[^/]+/, "type/all");
     }
-    let exchangeRate = i18n.getCurrencyConfig().rate;
+    if (i18n.current !== "ja") {
+      await i18n.fetchExchangeRates();
+    }
+    const currencyConfig = i18n.getCurrencyConfig();
+    let exchangeRate = currencyConfig.rate;
     appState.currencyLang = i18n.current;
     if (i18n.current !== "ja") {
+      const rateSource = currencyConfig.apiDate ? `Frankfurter (${currencyConfig.apiDate})` : i18n.t("fallbackRate");
       const exchangeChoice = await modal.customChoice(i18n.t("modifyRatePrompt"), [
-        { label: i18n.t("useDefaultRateOption"), value: "default" },
+        { label: i18n.t("useApiRateOption", { source: rateSource }), value: "default" },
         { label: i18n.t("modifyRateOption"), value: "modify" }
       ]);
       if (exchangeChoice === "modify") {
@@ -2145,7 +2181,7 @@
         if (!isNaN(newExchangeRate) && newExchangeRate > 0) exchangeRate = newExchangeRate;
         else utils.styledLog(i18n.t("invalidRate"), "color: red; font-weight: bold;", "error");
       } else {
-        utils.styledLog(i18n.t("usingDefaultRate", { rate: exchangeRate }), "color: green; font-weight: bold;", "info");
+        utils.styledLog(i18n.t("usingApiRate", { rate: exchangeRate }), "color: green; font-weight: bold;", "info");
       }
     } else {
       exchangeRate = 1;
