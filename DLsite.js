@@ -20,6 +20,17 @@
     makeDraggable(element, handle) {
       let offsetX, offsetY;
       let isDragging = false;
+      const onMouseMove = (e) => {
+        if (!isDragging) return;
+        const newX = Math.max(0, Math.min(document.documentElement.clientWidth - element.offsetWidth, e.pageX - offsetX));
+        const newY = Math.max(0, Math.min(document.documentElement.clientHeight - element.offsetHeight, e.pageY - offsetY));
+        element.style.left = newX + "px";
+        element.style.top = newY + "px";
+      };
+      const onMouseUp = () => {
+        isDragging = false;
+        handle.style.cursor = "grab";
+      };
       handle.addEventListener("mousedown", (e) => {
         e.preventDefault();
         isDragging = true;
@@ -27,19 +38,12 @@
         offsetY = e.pageY - element.offsetTop;
         handle.style.cursor = "grabbing";
       });
-      document.addEventListener("mousemove", (e) => {
-        if (!isDragging) return;
-        let newX = e.pageX - offsetX;
-        let newY = e.pageY - offsetY;
-        newX = Math.max(0, Math.min(document.documentElement.clientWidth - element.offsetWidth, newX));
-        newY = Math.max(0, Math.min(document.documentElement.clientHeight - element.offsetHeight, newY));
-        element.style.left = newX + "px";
-        element.style.top = newY + "px";
-      });
-      document.addEventListener("mouseup", () => {
-        isDragging = false;
-        handle.style.cursor = "grab";
-      });
+      document.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mouseup", onMouseUp);
+      ui.managedListeners.push(
+        () => document.removeEventListener("mousemove", onMouseMove),
+        () => document.removeEventListener("mouseup", onMouseUp)
+      );
     },
     fadeIn(element) {
       if (typeof gsap !== "undefined") {
@@ -90,6 +94,15 @@
       if (element.parentNode) {
         element.parentNode.removeChild(element);
       }
+    },
+    groupByDay(works, reducer, initial) {
+      const groups = {};
+      works.forEach(work => {
+        const day = new Date(work.date).toISOString().slice(0, 10);
+        groups[day] = reducer(groups[day] !== undefined ? groups[day] : initial, work);
+      });
+      const sortedDates = Object.keys(groups).sort();
+      return { groups, sortedDates };
     }
   };
 
@@ -547,10 +560,10 @@
     t(key, vars = {}) {
       const langPack = this.languages[this.current] || this.languages.zh;
       let template = langPack.strings[key] || key;
-      Object.entries(vars).forEach(([k, v]) => {
-        template = template.replace(new RegExp(`{${k}}`, "g"), v);
-      });
-      return template;
+      const keys = Object.keys(vars);
+      if (keys.length === 0) return template;
+      const pattern = new RegExp(`{(${keys.join("|")})}`, "g");
+      return template.replace(pattern, (match, k) => vars[k] !== undefined ? String(vars[k]) : match);
     },
     getCurrencyConfig() {
       const langPack = this.languages[this.current] || this.languages.zh;
@@ -649,27 +662,7 @@
         }
       }, 0);
     },
-    customAlert(message) {
-      return new Promise(resolve => {
-        const { overlay, modalContainer } = modal.createModal("600px");
-        const msgDiv = document.createElement("pre");
-        msgDiv.style.textAlign = "left";
-        msgDiv.style.maxHeight = "400px";
-        msgDiv.style.overflowY = "auto";
-        msgDiv.textContent = message;
-        modalContainer.appendChild(msgDiv);
-        const btn = document.createElement("button");
-        btn.textContent = i18n.t("ok");
-        btn.className = "btn";
-        btn.setAttribute("aria-label", i18n.t("ok"));
-        btn.addEventListener("click", () => {
-          modal.closeModal(overlay, modalContainer, resolve);
-        });
-        modal.setupAccessibility(overlay, modalContainer, () => modal.closeModal(overlay, modalContainer, resolve));
-        modalContainer.appendChild(btn);
-      });
-    },
-    customAlertWithExtraInfo(message, extraInfo) {
+    customAlert(message, extraInfo = null) {
       return new Promise(resolve => {
         const { overlay, modalContainer } = modal.createModal("600px");
         const msgDiv = document.createElement("pre");
@@ -908,6 +901,16 @@
 
   const charts = {
     chartInstances: new Map(),
+    async loadChartJS() {
+      if (typeof Chart !== "undefined") return;
+      await new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "https://cdn.jsdelivr.net/npm/chart.js";
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    },
     getChartType(key) {
       const chart = this.chartInstances.get(key);
       return chart ? chart.config.type : null;
@@ -1014,17 +1017,16 @@
       }
       return container;
     },
-    drawGenreChart(filteredGenreCount, works, currentType) {
-      currentType = currentType || "bar";
-      const container = charts.createChartContainer("chartContainer1", "100px", "100px", "500px", "400px", i18n.t("chartGenreTitle"));
+    drawBarPieChart(chartKey, containerId, data, works, filterFn, barColor, title, top, left, newType) {
+      const currentType = newType || charts.getChartType(chartKey) || "bar";
+      const container = charts.createChartContainer(containerId, top, left, "500px", "400px", title);
       const contentDiv = container.querySelector(".chart-content");
       while (contentDiv.firstChild) contentDiv.removeChild(contentDiv.firstChild);
       const header = document.createElement("h3");
       header.style.textAlign = "center";
       header.style.margin = "0";
-      header.textContent = i18n.t("chartGenreTitle") + " ";
+      header.textContent = title + " ";
       const toggleBtn = document.createElement("button");
-      toggleBtn.id = "toggleGenreChartBtn";
       toggleBtn.className = "btn";
       toggleBtn.style.marginLeft = "10px";
       toggleBtn.style.fontSize = "12px";
@@ -1036,129 +1038,62 @@
       canvas.style.width = "100%";
       canvas.style.height = "calc(100% - 30px)";
       contentDiv.appendChild(canvas);
-      const ctx = canvas.getContext("2d");
-      let backgroundColors, borderColors, options;
-      if (currentType === 'pie') {
-        backgroundColors = filteredGenreCount.map((_, i) => `hsl(${(i * 360 / filteredGenreCount.length)}, 70%, 70%)`);
-        borderColors = filteredGenreCount.map((_, i) => `hsl(${(i * 360 / filteredGenreCount.length)}, 70%, 50%)`);
-        options = {};
-      } else {
-        backgroundColors = "rgba(75, 192, 192, 0.6)";
-        borderColors = "rgba(75, 192, 192, 1)";
-        options = { scales: { y: { beginAtZero: true } } };
-      }
+      const isPie = currentType === 'pie';
+      const backgroundColors = isPie
+        ? data.map((_, i) => `hsl(${(i * 360 / data.length)}, 70%, 70%)`)
+        : barColor.bg;
+      const borderColors = isPie
+        ? data.map((_, i) => `hsl(${(i * 360 / data.length)}, 70%, 50%)`)
+        : barColor.border;
+      const options = isPie ? {} : { scales: { y: { beginAtZero: true } } };
       options.onClick = (evt, elements) => {
         if (elements.length > 0) {
-          const index = elements[0].index;
-          const genre = filteredGenreCount[index][0];
-          const worksWithGenre = works.filter(work => work.genre === genre || (work.mainGenre && work.mainGenre.includes(genre)));
-          let content = `${i18n.t("workTypeLabel")}: ${genre}\n${i18n.t("worksCount", { count: worksWithGenre.length })}\n\n`;
-          worksWithGenre.forEach(work => {
-            content += `${i18n.t("workNameLabel")}: ${work.name}\n${i18n.t("workMakerLabel")}: ${work.makerName}\n${i18n.t("purchaseDate")}: ${work.date}\n${i18n.t("priceYen", { amount: work.price })}\n\n`;
+          const label = data[elements[0].index][0];
+          const matched = works.filter(w => filterFn(w, label));
+          let content = `${label}\n${i18n.t("worksCount", { count: matched.length })}\n\n`;
+          matched.forEach(w => {
+            content += `${i18n.t("workNameLabel")}: ${w.name}\n${i18n.t("workMakerLabel")}: ${w.makerName}\n${i18n.t("purchaseDate")}: ${w.date}\n${i18n.t("priceYen", { amount: w.price })}\n\n`;
           });
           modal.customAlert(content);
         }
       };
-      charts.setChart("genreChart", new Chart(ctx, {
+      charts.setChart(chartKey, new Chart(canvas.getContext("2d"), {
         type: currentType,
         data: {
-          labels: filteredGenreCount.map(item => item[0]),
+          labels: data.map(item => item[0]),
           datasets: [{
             label: i18n.t("workCount"),
-            data: filteredGenreCount.map(item => item[1].count),
+            data: data.map(item => item[1].count),
             backgroundColor: backgroundColors,
             borderColor: borderColors,
             borderWidth: 1
           }]
         },
-        options: options
+        options
       }));
-      setTimeout(() => {
-        const btn = document.getElementById("toggleGenreChartBtn");
-        if (btn) {
-          ui.addManagedListener(btn, "click", () => {
-            const newType = currentType === 'bar' ? 'pie' : 'bar';
-            charts.drawGenreChart(filteredGenreCount, works, newType);
-          });
-        }
-      }, 0);
+      ui.addManagedListener(toggleBtn, "click", () => {
+        const nextType = currentType === 'bar' ? 'pie' : 'bar';
+        charts.drawBarPieChart(chartKey, containerId, data, works, filterFn, barColor, title, top, left, nextType);
+      });
+    },
+    drawGenreChart(filteredGenreCount, works, currentType) {
+      charts.drawBarPieChart(
+        "genreChart", "chartContainer1", filteredGenreCount, works,
+        (w, genre) => w.genre === genre || (w.mainGenre && w.mainGenre.includes(genre)),
+        { bg: "rgba(75, 192, 192, 0.6)", border: "rgba(75, 192, 192, 1)" },
+        i18n.t("chartGenreTitle"), "100px", "100px"
+      );
     },
     drawMakerChart(filteredMakerCount, works, currentType) {
-      currentType = currentType || "bar";
-      const container = charts.createChartContainer("chartContainer2", "100px", "650px", "500px", "400px", i18n.t("chartMakerTitle"));
-      const contentDiv = container.querySelector(".chart-content");
-      while (contentDiv.firstChild) contentDiv.removeChild(contentDiv.firstChild);
-      const header = document.createElement("h3");
-      header.style.textAlign = "center";
-      header.style.margin = "0";
-      header.textContent = i18n.t("chartMakerTitle") + " ";
-      const toggleBtn = document.createElement("button");
-      toggleBtn.id = "toggleMakerChartBtn";
-      toggleBtn.className = "btn";
-      toggleBtn.style.marginLeft = "10px";
-      toggleBtn.style.fontSize = "12px";
-      toggleBtn.textContent = currentType === 'bar' ? i18n.t("chartSwitchPie") : i18n.t("chartSwitchBar");
-      toggleBtn.setAttribute("aria-label", toggleBtn.textContent);
-      header.appendChild(toggleBtn);
-      contentDiv.appendChild(header);
-      const canvas = document.createElement("canvas");
-      canvas.style.width = "100%";
-      canvas.style.height = "calc(100% - 30px)";
-      contentDiv.appendChild(canvas);
-      const ctx = canvas.getContext("2d");
-      let backgroundColors, borderColors, options;
-      if (currentType === 'pie') {
-        backgroundColors = filteredMakerCount.map((_, i) => `hsl(${(i * 360 / filteredMakerCount.length)}, 70%, 70%)`);
-        borderColors = filteredMakerCount.map((_, i) => `hsl(${(i * 360 / filteredMakerCount.length)}, 70%, 50%)`);
-        options = {};
-      } else {
-        backgroundColors = "rgba(153, 102, 255, 0.6)";
-        borderColors = "rgba(153, 102, 255, 1)";
-        options = { scales: { y: { beginAtZero: true } } };
-      }
-      options.onClick = (evt, elements) => {
-        if (elements.length > 0) {
-          const index = elements[0].index;
-          const maker = filteredMakerCount[index][0];
-          const worksByMaker = works.filter(work => work.makerName === maker);
-          let content = `${i18n.t("workMakerLabel")}: ${maker}\n${i18n.t("worksCount", { count: worksByMaker.length })}\n\n`;
-          worksByMaker.forEach(work => {
-            content += `${i18n.t("workNameLabel")}: ${work.name}\n${i18n.t("purchaseDate")}: ${work.date}\n${i18n.t("priceYen", { amount: work.price })}\n\n`;
-          });
-          modal.customAlert(content);
-        }
-      };
-      charts.setChart("makerChart", new Chart(ctx, {
-        type: currentType,
-        data: {
-          labels: filteredMakerCount.map(item => item[0]),
-          datasets: [{
-            label: i18n.t("workCount"),
-            data: filteredMakerCount.map(item => item[1].count),
-            backgroundColor: backgroundColors,
-            borderColor: borderColors,
-            borderWidth: 1
-          }]
-        },
-        options: options
-      }));
-      setTimeout(() => {
-        const btn = document.getElementById("toggleMakerChartBtn");
-        if (btn) {
-          ui.addManagedListener(btn, "click", () => {
-            const newType = currentType === 'bar' ? 'pie' : 'bar';
-            charts.drawMakerChart(filteredMakerCount, works, newType);
-          });
-        }
-      }, 0);
+      charts.drawBarPieChart(
+        "makerChart", "chartContainer2", filteredMakerCount, works,
+        (w, maker) => w.makerName === maker,
+        { bg: "rgba(153, 102, 255, 0.6)", border: "rgba(153, 102, 255, 1)" },
+        i18n.t("chartMakerTitle"), "100px", "650px"
+      );
     },
     drawTimelineChart(works) {
-      const groups = {};
-      works.forEach(work => {
-        let day = new Date(work.date).toISOString().slice(0,10);
-        groups[day] = (groups[day] || 0) + 1;
-      });
-      const sortedDates = Object.keys(groups).sort();
+      const { groups, sortedDates } = utils.groupByDay(works, (acc) => acc + 1, 0);
       const counts = sortedDates.map(date => groups[date]);
       const container = charts.createChartContainer("chartContainer3", "550px", "100px", "500px", "400px", i18n.t("chartTimelineTitle"));
       const contentDiv = container.querySelector(".chart-content");
@@ -1208,12 +1143,7 @@
       }));
     },
     drawCumulativeChart(works) {
-      const groups = {};
-      works.forEach(work => {
-        let day = new Date(work.date).toISOString().slice(0,10);
-        groups[day] = (groups[day] || 0) + work.price;
-      });
-      const sortedDates = Object.keys(groups).sort();
+      const { groups, sortedDates } = utils.groupByDay(works, (acc, w) => acc + w.price, 0);
       let cumulative = [];
       let total = 0;
       sortedDates.forEach(date => { total += groups[date]; cumulative.push(total); });
@@ -1245,7 +1175,7 @@
               content += `${i18n.t("workNameLabel")}: ${work.name}\n${i18n.t("workMakerLabel")}: ${work.makerName}\n${i18n.t("priceYen", { amount: work.price })}\n\n`;
             });
             const dayTotal = worksOnDate.reduce((sum, work) => sum + work.price, 0);
-            modal.customAlertWithExtraInfo(content, i18n.t("totalDay", { amount: dayTotal }));
+            modal.customAlert(content, i18n.t("totalDay", { amount: dayTotal }));
           }
         }
       };
@@ -1479,6 +1409,7 @@
   };
 
   const dataProcessor = {
+    _errorLogs: [],
     async fetchUrlAsync(url, { ttl = cache.defaultTtl } = {}) {
       const cached = cache.get(url);
       if (cached) return cached;
@@ -1489,7 +1420,7 @@
         cache.set(url, text, ttl);
         return text;
       } catch (e) {
-        ui.errorLogs.push("Error fetching " + url + ": " + e);
+        dataProcessor._errorLogs.push("Error fetching " + url + ": " + e);
         return "";
       }
     },
@@ -1502,7 +1433,7 @@
           await new Promise(resolve => setTimeout(resolve, 300));
         }
       }
-      ui.errorLogs.push(`Page ${pageNum} failed after ${maxRetries + 1} attempts`);
+      dataProcessor._errorLogs.push(`Page ${pageNum} failed after ${maxRetries + 1} attempts`);
       return null;
     },
     async processPage(doc, result, detailMode) {
@@ -1510,16 +1441,17 @@
       const detailPromises = [];
       trElms.forEach(elm => {
         const work = {};
-        work.url = elm.querySelector(".work_name a") ? elm.querySelector(".work_name a").href : "";
+        const nameAnchor = elm.querySelector(".work_name a");
+        work.url = nameAnchor ? nameAnchor.href : "";
         work.date = elm.querySelector(".buy_date").innerText;
         work.name = elm.querySelector(".work_name").innerText.trim();
         work.genre = elm.querySelector(".work_genre span").textContent.trim();
-        let genreAnchor = elm.querySelector(".work_genre a");
+        const genreAnchor = elm.querySelector(".work_genre a");
         work.genreLink = genreAnchor ? genreAnchor.href : "";
         const priceText = elm.querySelector(".work_price").textContent.split(' /')[0];
         work.price = parseInt(priceText.replace(/\D/g, ''));
         work.makerName = elm.querySelector(".maker_name").innerText.trim();
-        let makerAnchor = elm.querySelector(".maker_name a");
+        const makerAnchor = elm.querySelector(".maker_name a");
         work.makerLink = makerAnchor ? makerAnchor.href : "";
         if (detailMode && work.url !== "") {
           detailPromises.push((async (w) => {
@@ -1539,7 +1471,7 @@
                 entry.count++;
               });
             } catch(e) {
-              ui.errorLogs.push(`Error fetching detail for ${w.url}: ${e}`);
+              dataProcessor._errorLogs.push(`Error fetching detail for ${w.url}: ${e}`);
             }
           })(work));
         }
@@ -1564,12 +1496,13 @@
       });
       if (detailPromises.length > 0) await Promise.all(detailPromises);
     },
-    async fetchAllPages(dlurl, detailMode, updateProgressCallback) {
+    async fetchAllPages(dlurl, detailMode, updateProgressCallback, errorLogs = []) {
+      dataProcessor._errorLogs = errorLogs;
       const result = { count: 0, totalPrice: 0, works: [], genreCount: new Map(), makerCount: new Map(), eol: [] };
       const concurrencyLimit = 4;
       const firstPageText = await dataProcessor.fetchPageWithRetry(dlurl, 1);
       if (!firstPageText) {
-        ui.errorLogs.push(i18n.t("firstPageFail"));
+        dataProcessor._errorLogs.push(i18n.t("firstPageFail"));
         return result;
       }
       const firstDoc = new DOMParser().parseFromString(firstPageText, "text/html");
@@ -1593,7 +1526,7 @@
               const doc = new DOMParser().parseFromString(pageText, "text/html");
               await dataProcessor.processPage(doc, result, detailMode);
             } catch (e) {
-              ui.errorLogs.push(`Error fetching page ${pageNum}: ${e}`);
+              dataProcessor._errorLogs.push(`Error fetching page ${pageNum}: ${e}`);
             }
           })());
         }
@@ -1640,18 +1573,12 @@
       }
       md += `\n`;
       md += `## ${i18n.t("timeline")}\n\n`;
-      const timelineGroups = {};
-      result.works.forEach(work => {
-        let day = new Date(work.date).toISOString().slice(0,10);
-        if(!timelineGroups[day]) timelineGroups[day] = [];
-        timelineGroups[day].push(work);
-      });
-      const sortedDates = Object.keys(timelineGroups).sort();
-      sortedDates.forEach(date => {
-          md += `### ${date} (${timelineGroups[date].length} ${i18n.t("workCount")})\n\n`;
+      const { groups: mdGroups, sortedDates: mdSortedDates } = utils.groupByDay(result.works, (acc, w) => { acc.push(w); return acc; }, []);
+      mdSortedDates.forEach(date => {
+          md += `### ${date} (${mdGroups[date].length} ${i18n.t("workCount")})\n\n`;
           md += `| ${i18n.t("workNameLabel")} | ${i18n.t("workMakerLabel")} | ${i18n.t("priceYen", { amount: i18n.t("valueLabel") })} |\n`;
           md += `| --- | --- | --- |\n`;
-          timelineGroups[date].forEach(work => {
+          mdGroups[date].forEach(work => {
               md += `| ${work.name} | ${work.makerName} | ${i18n.t("priceYen", { amount: work.price })} |\n`;
           });
           md += `\n`;
@@ -1687,37 +1614,31 @@
       }
       csv += "\n";
       csv += `${i18n.t("timeline")}\n`;
-      const timelineGroups = {};
-      result.works.forEach(work => {
-        let day = new Date(work.date).toISOString().slice(0,10);
-        if(!timelineGroups[day]) timelineGroups[day] = [];
-        timelineGroups[day].push(work);
-      });
-      const sortedDates = Object.keys(timelineGroups).sort();
-      sortedDates.forEach(date => {
-          csv += `${i18n.t("dateLabel", { date })} (${timelineGroups[date].length} ${i18n.t("workCount")})\n`;
+      const { groups: csvGroups, sortedDates: csvSortedDates } = utils.groupByDay(result.works, (acc, w) => { acc.push(w); return acc; }, []);
+      csvSortedDates.forEach(date => {
+          csv += `${i18n.t("dateLabel", { date })} (${csvGroups[date].length} ${i18n.t("workCount")})\n`;
           csv += `${i18n.t("workNameLabel")},${i18n.t("workMakerLabel")},${i18n.t("priceYen", { amount: i18n.t("valueLabel") })}\n`;
-          timelineGroups[date].forEach(work => {
+          csvGroups[date].forEach(work => {
               csv += `${work.name},${work.makerName},${work.price}\n`;
           });
           csv += "\n";
       });
       return "\ufeff" + csv;
-      },
-      generateJSON(result, exchangeRate, filteredGenreCount, filteredMakerCount) {
-          const config = i18n.getCurrencyConfig();
-          const jsonObject = {
-              count: result.count,
-              totalPriceJPY: result.totalPrice,
-              totalPriceConverted: (result.totalPrice * exchangeRate).toFixed(2),
-              currency: config.label,
-              genreRanking: filteredGenreCount.map(([genre, entry]) => ({ genre, count: entry.count })),
-              makerRanking: filteredMakerCount.map(([maker, entry]) => ({ maker, count: entry.count })),
-              eol: result.eol,
-              works: result.works
-          };
-          return JSON.stringify(jsonObject, null, 2);
-      },
+    },
+    generateJSON(result, exchangeRate, filteredGenreCount, filteredMakerCount) {
+      const config = i18n.getCurrencyConfig();
+      const jsonObject = {
+        count: result.count,
+        totalPriceJPY: result.totalPrice,
+        totalPriceConverted: (result.totalPrice * exchangeRate).toFixed(2),
+        currency: config.label,
+        genreRanking: filteredGenreCount.map(([genre, entry]) => ({ genre, count: entry.count })),
+        makerRanking: filteredMakerCount.map(([maker, entry]) => ({ maker, count: entry.count })),
+        eol: result.eol,
+        works: result.works
+      };
+      return JSON.stringify(jsonObject, null, 2);
+    },
     addDownloadButton(result, exchangeRate, filteredGenreCount, filteredMakerCount) {
       const downloadBtn = document.createElement("button");
       downloadBtn.id = "downloadBtn";
@@ -1731,23 +1652,22 @@
       ui.addManagedListener(downloadBtn, "click", async () => {
         const choice = await modal.customChoice(i18n.t("downloadFormatPrompt"), [
           { label: i18n.t("downloadMd"), value: "md" },
-            { label: i18n.t("downloadCsv"), value: "csv" },
-            { label: i18n.t("downloadJson"), value: "json" },
+          { label: i18n.t("downloadCsv"), value: "csv" },
+          { label: i18n.t("downloadJson"), value: "json" },
           { label: i18n.t("downloadAll"), value: "all" }
         ]);
-        if(choice === "md" || choice === "all") {
+        if (choice === "md" || choice === "all") {
           const mdContent = downloadContent.generateMarkdown(result, exchangeRate, filteredGenreCount, filteredMakerCount);
           utils.downloadFile("DLsite_Result.md", mdContent, "text/markdown");
         }
-        if(choice === "csv" || choice === "all") {
+        if (choice === "csv" || choice === "all") {
           const csvContent = downloadContent.generateCSV(result, exchangeRate, filteredGenreCount, filteredMakerCount);
           utils.downloadFile("DLsite_Result.csv", csvContent, "text/csv");
-          }
+        }
         if (choice === "json" || choice === "all") {
-              const jsonContent = downloadContent.generateJSON(result, exchangeRate, filteredGenreCount, filteredMakerCount);
-              utils.downloadFile("DLsite_Result.json", jsonContent, "application/json");
-          }
-
+          const jsonContent = downloadContent.generateJSON(result, exchangeRate, filteredGenreCount, filteredMakerCount);
+          utils.downloadFile("DLsite_Result.json", jsonContent, "application/json");
+        }
       });
       document.body.appendChild(downloadBtn);
       ui.trackElement(downloadBtn);
@@ -2050,15 +1970,7 @@
       }
       const renderCharts = async () => {
         if (appState.showCharts) {
-          if (typeof Chart === "undefined") {
-            await new Promise((resolve, reject) => {
-              const script = document.createElement("script");
-              script.src = "https://cdn.jsdelivr.net/npm/chart.js";
-              script.onload = resolve;
-              script.onerror = reject;
-              document.head.appendChild(script);
-            });
-          }
+          await charts.loadChartJS();
           if (appState.detailMode) {
             charts.drawGenreChart(appState.filteredGenreCount, appState.result.works, charts.getChartType("genreChart") || "bar");
           }
@@ -2242,7 +2154,7 @@
     console.group(`📄 ${i18n.t("progressGroup")}`);
     const result = await dataProcessor.fetchAllPages(dlurl, detailMode, (currentBatch, totalBatches) => {
       ui.updateProgressBar((currentBatch / totalBatches) * 100, currentBatch, totalBatches);
-    });
+    }, ui.errorLogs);
     console.groupEnd();
     const excludeResponse = await modal.customPrompt(i18n.t("excludePrompt"), "0");
     let excludeThreshold = 0;
@@ -2271,15 +2183,7 @@
     appState.excludeThreshold = excludeThreshold;
     appState.detailMode = detailMode;
     if (appState.showCharts) {
-      if (typeof Chart === "undefined") {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement("script");
-          script.src = "https://cdn.jsdelivr.net/npm/chart.js";
-          script.onload = resolve;
-          script.onerror = reject;
-          document.head.appendChild(script);
-        });
-      }
+      await charts.loadChartJS();
       if (detailMode) {
         charts.drawGenreChart(filteredGenreCount, result.works, "bar");
       }
@@ -2556,21 +2460,15 @@
         empty.textContent = i18n.t("noData");
         timelineContent.appendChild(empty);
       } else {
-        const timelineGroups = {};
-        works.forEach(work => {
-          let day = new Date(work.date).toISOString().slice(0,10);
-          if(!timelineGroups[day]) timelineGroups[day] = [];
-          timelineGroups[day].push(work);
-        });
-        const sortedDates = Object.keys(timelineGroups).sort();
-        sortedDates.forEach(date => {
+        const { groups: tlGroups, sortedDates: tlSortedDates } = utils.groupByDay(works, (acc, w) => { acc.push(w); return acc; }, []);
+        tlSortedDates.forEach(date => {
           const section = document.createElement("div");
           const title = document.createElement("strong");
-          title.textContent = `${date} (${timelineGroups[date].length} ${i18n.t("workCount")})`;
+          title.textContent = `${date} (${tlGroups[date].length} ${i18n.t("workCount")})`;
           section.appendChild(title);
           const table = createTable(
             [i18n.t("workNameLabel"), i18n.t("workMakerLabel"), i18n.t("valueLabel")],
-            timelineGroups[date].map(work => [work.name, work.makerName, i18n.t("priceYen", { amount: work.price })])
+            tlGroups[date].map(work => [work.name, work.makerName, i18n.t("priceYen", { amount: work.price })])
           );
           section.appendChild(table);
           timelineContent.appendChild(section);
