@@ -4,7 +4,9 @@
   const utils = {
     styledLog(message, style = "", type = "log") {
       const logFns = { log: console.log, warn: console.warn, error: console.error, info: console.info };
-      logFns[type](`%c${message}`, style);
+      // Pass the message as an argument (%s) instead of interpolating it into the
+      // format string, so user/DOM-derived text containing "%" cannot corrupt logs.
+      (logFns[type] || logFns.log)("%c%s", style, message);
     },
     downloadFile(filename, content, mimeType = "text/plain") {
       const blob = new Blob([content], { type: mimeType });
@@ -15,7 +17,8 @@
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      // Revoke asynchronously: revoking synchronously can cancel the download in Firefox.
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     },
     makeDraggable(element, handle) {
       let offsetX, offsetY;
@@ -98,11 +101,61 @@
     groupByDay(works, reducer, factory) {
       const groups = {};
       works.forEach(work => {
-        const day = new Date(work.date).toISOString().slice(0, 10);
+        const day = utils.toDateKey(work.date);
+        if (!day) return;
         groups[day] = reducer(groups[day] !== undefined ? groups[day] : factory(), work);
       });
       const sortedDates = Object.keys(groups).sort();
       return { groups, sortedDates };
+    },
+    pad2(n) {
+      return String(n).padStart(2, "0");
+    },
+    // Parse DLsite purchase dates robustly (e.g. "2023/05/01", "2023-05-01",
+    // "2023年05月01日", "2023.5.1", full-width digits) into a LOCAL Date. Relying
+    // on `new Date(str)` alone is browser/locale dependent (notably Safari).
+    parseWorkDate(value) {
+      if (value instanceof Date) return isNaN(value.getTime()) ? null : value;
+      if (value === null || value === undefined) return null;
+      const raw = String(value).trim();
+      if (!raw) return null;
+      const normalized = raw
+        .replace(/[０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
+        .replace(/[年月]/g, "/")
+        .replace(/日/g, "");
+      const m = /^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/.exec(normalized);
+      if (m) {
+        const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+        return isNaN(d.getTime()) ? null : d;
+      }
+      const fallback = new Date(raw);
+      return isNaN(fallback.getTime()) ? null : fallback;
+    },
+    // Local-time YYYY-MM-DD key. `toISOString()` would shift the day backwards for
+    // users in UTC+ timezones (e.g. JST), causing off-by-one grouping.
+    toDateKey(value) {
+      const d = value instanceof Date ? value : utils.parseWorkDate(value);
+      if (!d || isNaN(d.getTime())) return "";
+      return `${d.getFullYear()}-${utils.pad2(d.getMonth() + 1)}-${utils.pad2(d.getDate())}`;
+    },
+    // Parse a "YYYY-MM-DD" string as a LOCAL date (the native `new Date(str)` treats
+    // it as UTC midnight), falling back for other formats.
+    parseLocalDate(str) {
+      if (!str) return null;
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(str));
+      if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+      return utils.parseWorkDate(str);
+    },
+    // Extract the first number from a price string ("1,000円", "1,000 / 500").
+    // Replaces the old "strip every non-digit" approach, which merged multiple
+    // numbers together.
+    parsePrice(text) {
+      if (text === null || text === undefined) return 0;
+      const s = String(text).replace(/[０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0));
+      const m = s.match(/\d[\d,]*/);
+      if (!m) return 0;
+      const n = parseInt(m[0].replace(/,/g, ""), 10);
+      return isNaN(n) ? 0 : n;
     }
   };
 
@@ -265,6 +318,8 @@
           resetTitle: "重置",
           errorLogTitle: "错误日志",
           retryPage: "第 {attempt} 次重试页面 {page}",
+          retryUrl: "第 {attempt} 次重试：{url}",
+          aborted: "已取消抓取，展示已获取的部分结果。",
           firstPageFail: "无法获取第一页数据，终止任务。",
           fetchDetailLog: "获取作品详情: {url}",
           progressGroup: "页面抓取进度",
@@ -401,6 +456,8 @@
           resetTitle: "Reset",
           errorLogTitle: "Errors",
           retryPage: "Retry {attempt} for page {page}",
+          retryUrl: "Retry {attempt}: {url}",
+          aborted: "Fetch cancelled; showing partial results.",
           firstPageFail: "Failed to fetch the first page, stopping.",
           fetchDetailLog: "Fetching work detail: {url}",
           progressGroup: "Page fetch progress",
@@ -480,7 +537,7 @@
           aspectMakerOverall: "サークル比較",
           aspectMakerType: "サークルとタイプ比較",
           period1Invalid: "期間1の開始日は終了日より後にできません。",
-          period2Invalid: "期间2の開始日は終了日より後にできません。",
+          period2Invalid: "期間2の開始日は終了日より後にできません。",
           analysisExists: "この分析は既に存在します。",
           downloadFormatPrompt: "ダウンロード形式を選んでください：",
           downloadMd: "Markdown (.md)",
@@ -537,6 +594,8 @@
           resetTitle: "リセット",
           errorLogTitle: "エラーログ",
           retryPage: "{page} ページを {attempt} 回目再試行", 
+          retryUrl: "{attempt} 回目の再試行: {url}",
+          aborted: "取得をキャンセルしました。取得済みの結果を表示します。",
           firstPageFail: "最初のページを取得できません。処理を終了します。",
           fetchDetailLog: "作品詳細を取得: {url}",
           progressGroup: "ページ取得の進行状況",
@@ -566,6 +625,7 @@
       }
     },
     current: null,
+    _regexCache: {},
     init() {
       const stored = localStorage.getItem("dlsiteAnalyzerLang");
       if (stored && this.languages[stored]) {
@@ -588,7 +648,13 @@
       let template = langPack.strings[key] || key;
       const keys = Object.keys(vars);
       if (keys.length === 0) return template;
-      const pattern = new RegExp(`{(${keys.join("|")})}`, "g");
+      // Cache the compiled replacement regex per key-set (hot path: called per table row).
+      const signature = keys.join("|");
+      let pattern = this._regexCache[signature];
+      if (!pattern) {
+        pattern = new RegExp(`{(${signature})}`, "g");
+        this._regexCache[signature] = pattern;
+      }
       return template.replace(pattern, (match, k) => vars[k] !== undefined ? String(vars[k]) : match);
     },
     async fetchExchangeRates() {
@@ -633,8 +699,24 @@
     showCharts: false,
     detailMode: true,
     currencyLang: i18n.current,
-    customRates: {}
+    customRates: {},
+    aborted: false,
+    saveCustomRates() {
+      try {
+        localStorage.setItem("dlsiteAnalyzerRates", JSON.stringify(this.customRates));
+      } catch (e) {
+        // storage full/unavailable: custom rates simply won't persist
+      }
+    }
   };
+
+  // Restore per-language custom rates so a user's rate edit survives a reload.
+  try {
+    const savedRates = JSON.parse(localStorage.getItem("dlsiteAnalyzerRates") || "{}");
+    if (savedRates && typeof savedRates === "object") appState.customRates = savedRates;
+  } catch (e) {
+    appState.customRates = {};
+  }
 
   const currencyHelper = {
     _cache: new Map(),
@@ -926,11 +1008,19 @@
           const p1End = period1EndSelect.value;
           const p2Start = period2StartSelect.value;
           const p2End = period2EndSelect.value;
-          if(new Date(p1Start) > new Date(p1End)){
+          // Parse as local dates and include the whole end day, otherwise works on
+          // the end date are excluded (UTC-midnight comparison / no end-of-day).
+          const p1StartDate = utils.parseLocalDate(p1Start);
+          const p1EndDate = utils.parseLocalDate(p1End);
+          const p2StartDate = utils.parseLocalDate(p2Start);
+          const p2EndDate = utils.parseLocalDate(p2End);
+          if (p1EndDate) p1EndDate.setHours(23, 59, 59, 999);
+          if (p2EndDate) p2EndDate.setHours(23, 59, 59, 999);
+          if(p1StartDate > p1EndDate){
             modal.customAlert(i18n.t("period1Invalid"));
             return;
           }
-          if(new Date(p2Start) > new Date(p2End)){
+          if(p2StartDate > p2EndDate){
             modal.customAlert(i18n.t("period2Invalid"));
             return;
           }
@@ -942,8 +1032,8 @@
           };
           modal.closeModal(overlay, modalContainer, () => {
             resolve({
-              period1: { start: new Date(p1Start), end: new Date(p1End) },
-              period2: { start: new Date(p2Start), end: new Date(p2End) },
+              period1: { start: p1StartDate, end: p1EndDate },
+              period2: { start: p2StartDate, end: p2EndDate },
               aspects: selectedAspects
             });
           });
@@ -958,15 +1048,26 @@
 
   const charts = {
     chartInstances: new Map(),
+    _loading: null,
     async loadChartJS() {
-      if (typeof Chart !== "undefined") return;
-      await new Promise((resolve, reject) => {
+      if (typeof Chart !== "undefined") return true;
+      if (charts._loading) return charts._loading;
+      charts._loading = new Promise((resolve) => {
         const script = document.createElement("script");
-        script.src = "https://cdn.jsdelivr.net/npm/chart.js";
-        script.onload = resolve;
-        script.onerror = reject;
+        // Pinned to the version documented in the README (4.4.0) instead of "latest",
+        // with SRI (sha256, as published by jsdelivr's data API for this exact path).
+        script.src = "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js";
+        script.integrity = "sha256-Mh46P6mNpKqpV9EL5Xy7UU3gmJ7tj51ya10FkCzQGQQ=";
+        script.crossOrigin = "anonymous";
+        script.onload = () => resolve(true);
+        script.onerror = () => {
+          charts._loading = null;
+          utils.styledLog("⚠ Chart.js 加载失败，图表功能不可用", "color: #ff8c00; font-weight: bold;", "warn");
+          resolve(false);
+        };
         document.head.appendChild(script);
       });
+      return charts._loading;
     },
     getChartType(key) {
       const chart = this.chartInstances.get(key);
@@ -1124,7 +1225,7 @@
           const matched = works.filter(w => filterFn(w, label));
           let content = `${label}\n${i18n.t("worksCount", { count: matched.length })}\n\n`;
           matched.forEach(w => {
-            content += `${i18n.t("workNameLabel")}: ${w.name}\n${i18n.t("workMakerLabel")}: ${w.makerName}\n${i18n.t("purchaseDate")}: ${w.date}\n${i18n.t("priceYen", { amount: w.price })}\n\n`;
+            content += `${i18n.t("workNameLabel")}: ${w.name}\n${i18n.t("workMakerLabel")}: ${w.makerName}\n${i18n.t("purchaseDate")}: ${w.date}\n${currencyHelper.format(w.price, appState.exchangeRate)}\n\n`;
           });
           modal.customAlert(content);
         }
@@ -1193,10 +1294,10 @@
           if (elements.length > 0) {
             const index = elements[0].index;
             const date = sortedDates[index];
-            const worksOnDate = works.filter(work => new Date(work.date).toISOString().slice(0,10) === date);
+            const worksOnDate = works.filter(work => utils.toDateKey(work.date) === date);
             let content = `${i18n.t("dateLabel", { date })}\n${i18n.t("purchaseCount", { count: worksOnDate.length })}\n\n`;
             worksOnDate.forEach(work => {
-              content += `${i18n.t("workNameLabel")}: ${work.name}\n${i18n.t("workMakerLabel")}: ${work.makerName}\n${i18n.t("priceYen", { amount: work.price })}\n\n`;
+              content += `${i18n.t("workNameLabel")}: ${work.name}\n${i18n.t("workMakerLabel")}: ${work.makerName}\n${currencyHelper.format(work.price, appState.exchangeRate)}\n\n`;
             });
             modal.customAlert(content);
           }
@@ -1245,10 +1346,10 @@
           if (elements.length > 0) {
             const index = elements[0].index;
             const date = sortedDates[index];
-            const worksOnDate = works.filter(work => new Date(work.date).toISOString().slice(0,10) === date);
+            const worksOnDate = works.filter(work => utils.toDateKey(work.date) === date);
             let content = `${i18n.t("dateLabel", { date })}\n${i18n.t("purchaseCount", { count: worksOnDate.length })}\n\n`;
             worksOnDate.forEach(work => {
-              content += `${i18n.t("workNameLabel")}: ${work.name}\n${i18n.t("workMakerLabel")}: ${work.makerName}\n${i18n.t("priceYen", { amount: work.price })}\n\n`;
+              content += `${i18n.t("workNameLabel")}: ${work.name}\n${i18n.t("workMakerLabel")}: ${work.makerName}\n${currencyHelper.format(work.price, appState.exchangeRate)}\n\n`;
             });
             const dayTotal = worksOnDate.reduce((sum, work) => sum + work.price, 0);
             modal.customAlert(content, i18n.t("totalDay", { amount: dayTotal }));
@@ -1332,10 +1433,21 @@
   };
 
   const compareAllAspects = (result, periods, exchangeRate, aspects) => {
+    // Stable identity for the chosen periods so identical analyses can be detected
+    // (the previous `Date.now()`-based keys were unique every call, so the
+    // "analysis already exists" guard never triggered).
+    const periodSig = [
+      periods.period1.start ? periods.period1.start.getTime() : "x",
+      periods.period1.end ? periods.period1.end.getTime() : "x",
+      periods.period2.start ? periods.period2.start.getTime() : "x",
+      periods.period2.end ? periods.period2.end.getTime() : "x"
+    ].join("_");
+
     const filterByPeriod = (works, period) => {
+      if (!period || !period.start || !period.end) return [];
       return works.filter(work => {
-        const d = new Date(work.date);
-        return d >= period.start && d <= period.end;
+        const d = utils.parseWorkDate(work.date);
+        return !!d && d >= period.start && d <= period.end;
       });
     };
 
@@ -1392,7 +1504,7 @@
         `${i18n.t("period1")} ${i18n.t("workCount")}`,
         `${i18n.t("period2")} ${i18n.t("workCount")}`,
         i18n.t("workCount"),
-        `prefType_${Date.now()}`
+        `prefType_${periodSig}`
       );
     }
 
@@ -1415,7 +1527,7 @@
           `${i18n.t("period1")} ${i18n.t("workCount")}`,
           `${i18n.t("period2")} ${i18n.t("workCount")}`,
           i18n.t("workCount"),
-          `prefMaker_${Date.now()}`
+          `prefMaker_${periodSig}`
         );
       }
 
@@ -1486,70 +1598,133 @@
 
   const dataProcessor = {
     _errorLogs: [],
-    async fetchUrlAsync(url, { ttl = cache.defaultTtl } = {}) {
-      const cached = cache.get(url);
-      if (cached) return cached;
-      try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(response.statusText);
-        const text = await response.text();
-        cache.set(url, text, ttl);
-        return text;
-      } catch (e) {
-        dataProcessor._errorLogs.push("Error fetching " + url + ": " + e);
-        return "";
-      }
+    // Bump to invalidate cached entries when parsing/caching logic changes.
+    CACHE_VERSION: 1,
+    // Detail (tag) pages rarely change, so cache only their parsed tags for a week.
+    // The purchase-list pages themselves are never cached, so results stay fresh.
+    DETAIL_TTL: 7 * 86400000,
+    DETAIL_CONCURRENCY: 6,
+    _detailLimiter: null,
+    cacheKey(seed) {
+      return `dlsite_cache_v${dataProcessor.CACHE_VERSION}:${seed}`;
     },
-    async fetchPageWithRetry(url, pageNum, maxRetries = 2) {
-      for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        const pageText = await dataProcessor.fetchUrlAsync(url + pageNum);
-        if (pageText) return pageText;
-        if (attempt < maxRetries) {
-          utils.styledLog(`🔁 ${i18n.t("retryPage", { attempt: attempt + 1, page: pageNum })}`, "color: #ff8c00; font-weight: bold;");
-          await new Promise(resolve => setTimeout(resolve, 300));
+    _shouldRetry(status) {
+      if (status === undefined || status === null) return true; // network-level error
+      return status === 429 || status >= 500; // don't retry 4xx like 404/410
+    },
+    _delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    },
+    // Shared concurrency gate so detail fetches across all pages are throttled.
+    _getDetailLimiter() {
+      if (dataProcessor._detailLimiter) return dataProcessor._detailLimiter;
+      let active = 0;
+      const queue = [];
+      const pump = () => {
+        if (active >= dataProcessor.DETAIL_CONCURRENCY || queue.length === 0) return;
+        active++;
+        const { task, resolve, reject } = queue.shift();
+        Promise.resolve().then(task).then(resolve, reject).finally(() => {
+          active--;
+          pump();
+        });
+      };
+      dataProcessor._detailLimiter = (task) => new Promise((resolve, reject) => {
+        queue.push({ task, resolve, reject });
+        pump();
+      });
+      return dataProcessor._detailLimiter;
+    },
+    async fetchUrlAsync(url, { ttl = cache.defaultTtl, retries = 2, useCache = true, label = url } = {}) {
+      if (useCache) {
+        const cached = cache.get(dataProcessor.cacheKey(url));
+        if (cached) return cached;
+      }
+      for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+          const response = await fetch(url, { credentials: "same-origin" });
+          if (!response.ok) {
+            const err = new Error(response.statusText || `HTTP ${response.status}`);
+            err.status = response.status;
+            throw err;
+          }
+          const text = await response.text();
+          if (useCache) cache.set(dataProcessor.cacheKey(url), text, ttl);
+          return text;
+        } catch (e) {
+          if (!dataProcessor._shouldRetry(e && e.status) || attempt === retries) {
+            dataProcessor._errorLogs.push(`Error fetching ${url}: ${e && e.message ? e.message : e}`);
+            return "";
+          }
+          // Exponential backoff with jitter: 300ms -> 900ms -> 2.7s ...
+          const backoff = 300 * Math.pow(3, attempt) + Math.floor(Math.random() * 200);
+          utils.styledLog(`🔁 ${i18n.t("retryUrl", { attempt: attempt + 1, url: label })}`, "color: #ff8c00; font-weight: bold;");
+          await dataProcessor._delay(backoff);
         }
       }
+      return "";
+    },
+    // Fetch and cache only the parsed tag list of a work's detail page (small JSON),
+    // instead of caching the whole HTML document.
+    async fetchWorkGenres(url) {
+      const key = dataProcessor.cacheKey("genres:" + url);
+      const cached = cache.get(key);
+      if (cached) return cached;
+      const genres = await dataProcessor._getDetailLimiter()(async () => {
+        utils.styledLog(`🔍 ${i18n.t("fetchDetailLog", { url })}`, "color: #9933ff; font-weight: bold;");
+        const workText = await dataProcessor.fetchUrlAsync(url, { useCache: false, label: url });
+        if (!workText) return null;
+        const docWork = new DOMParser().parseFromString(workText, "text/html");
+        const list = [];
+        docWork.querySelectorAll(".main_genre a").forEach(a => list.push({ name: a.textContent.trim(), link: a.href }));
+        return list;
+      });
+      if (genres) cache.set(key, genres, dataProcessor.DETAIL_TTL);
+      return genres || [];
+    },
+    async fetchPageWithRetry(url, pageNum, maxRetries = 2) {
+      const pageText = await dataProcessor.fetchUrlAsync(url + pageNum, { retries: maxRetries, useCache: false, label: `page ${pageNum}` });
+      if (pageText) return pageText;
       dataProcessor._errorLogs.push(`Page ${pageNum} failed after ${maxRetries + 1} attempts`);
       return null;
     },
-    async processPage(doc, result, detailMode) {
+    async processPage(doc, result, detailMode, shouldAbort = () => false) {
       const trElms = doc.querySelectorAll(".work_list_main tr:not(.item_name)");
       const detailPromises = [];
+      const pageWorks = [];
       trElms.forEach(elm => {
+        // Parse defensively: DLsite's markup is fragile and a single unexpected row
+        // must not abort the whole page (previously a missing cell threw and the
+        // entire page's works were dropped).
         const work = {};
         const nameCell = elm.querySelector(".work_name");
-        const nameAnchor = nameCell.querySelector("a");
+        const nameAnchor = nameCell ? nameCell.querySelector("a") : null;
         work.url = nameAnchor ? nameAnchor.href : "";
-        work.date = elm.querySelector(".buy_date").innerText;
-        work.name = nameCell.innerText.trim();
+        const dateCell = elm.querySelector(".buy_date");
+        work.date = dateCell ? dateCell.innerText.trim() : "";
+        work.name = nameCell ? nameCell.innerText.trim() : "";
         const genreCell = elm.querySelector(".work_genre");
-        work.genre = genreCell.querySelector("span").textContent.trim();
-        const genreAnchor = genreCell.querySelector("a");
+        const genreSpan = genreCell ? genreCell.querySelector("span") : null;
+        work.genre = genreSpan ? genreSpan.textContent.trim() : "";
+        const genreAnchor = genreCell ? genreCell.querySelector("a") : null;
         work.genreLink = genreAnchor ? genreAnchor.href : "";
-        const priceText = elm.querySelector(".work_price").textContent.split(' /')[0];
-        work.price = parseInt(priceText.replace(/\D/g, ''));
+        const priceCell = elm.querySelector(".work_price");
+        // Extract the first number (handles "1,000円", "1,000 / 500", full-width
+        // digits). Free / unparsable prices become 0 instead of NaN.
+        work.price = priceCell ? utils.parsePrice(priceCell.textContent) : 0;
         const makerCell = elm.querySelector(".maker_name");
-        work.makerName = makerCell.innerText.trim();
-        const makerAnchor = makerCell.querySelector("a");
+        work.makerName = makerCell ? makerCell.innerText.trim() : "";
+        const makerAnchor = makerCell ? makerCell.querySelector("a") : null;
         work.makerLink = makerAnchor ? makerAnchor.href : "";
-        if (detailMode && work.url !== "") {
+        pageWorks.push(work);
+        if (detailMode && work.url !== "" && !shouldAbort()) {
           detailPromises.push((async (w) => {
             try {
-              utils.styledLog(`🔍 ${i18n.t("fetchDetailLog", { url: w.url })}`, "color: #9933ff; font-weight: bold;");
-              const workText = await dataProcessor.fetchUrlAsync(w.url);
-              const docWork = new DOMParser().parseFromString(workText, "text/html");
-              w.mainGenre = [];
-              docWork.querySelectorAll(".main_genre a").forEach(a => {
-                const g = a.textContent.trim();
-                w.mainGenre.push(g);
-                let entry = result.genreCount.get(g);
-                if (!entry) {
-                  entry = { count: 0, link: a.href };
-                  result.genreCount.set(g, entry);
-                }
-                entry.count++;
-              });
-            } catch(e) {
+              if (shouldAbort()) return;
+              const genres = await dataProcessor.fetchWorkGenres(w.url);
+              w.mainGenre = genres.map(g => g.name);
+              w.__mainGenreLinks = genres;
+            } catch (e) {
               dataProcessor._errorLogs.push(`Error fetching detail for ${w.url}: ${e}`);
             }
           })(work));
@@ -1565,17 +1740,36 @@
         if (work.price > 0) result.totalPrice += work.price;
         result.works.push(work);
         if (!work.url) result.eol.push(work);
-        if (!result.genreCount.has(work.genre)) {
-          result.genreCount.set(work.genre, { count: 1, link: work.genreLink });
-        } else {
-          let gEntry = result.genreCount.get(work.genre);
-          gEntry.count++;
-          if (!gEntry.link && work.genreLink) gEntry.link = work.genreLink;
-        }
       });
       if (detailPromises.length > 0) await Promise.all(detailPromises);
+      // Count genres per work, de-duplicated (a string appearing both as the
+      // top-level category and as a tag is counted once), after tags resolve.
+      const recordGenre = (genre, link) => {
+        if (!genre) return;
+        let entry = result.genreCount.get(genre);
+        if (!entry) {
+          entry = { count: 0, link: link || "" };
+          result.genreCount.set(genre, entry);
+        }
+        entry.count++;
+        if (!entry.link && link) entry.link = link;
+      };
+      pageWorks.forEach(work => {
+        const seen = new Set();
+        const recordOnce = (genre, link) => {
+          if (!genre || seen.has(genre)) return;
+          seen.add(genre);
+          recordGenre(genre, link);
+        };
+        recordOnce(work.genre, work.genreLink);
+        if (Array.isArray(work.mainGenre)) {
+          const links = work.__mainGenreLinks || [];
+          work.mainGenre.forEach((g, i) => recordOnce(g, links[i] ? links[i].link : ""));
+        }
+        delete work.__mainGenreLinks;
+      });
     },
-    async fetchAllPages(dlurl, detailMode, updateProgressCallback, errorLogs = []) {
+    async fetchAllPages(dlurl, detailMode, updateProgressCallback, errorLogs = [], shouldAbort = () => false) {
       dataProcessor._errorLogs = errorLogs;
       const result = { count: 0, totalPrice: 0, works: [], genreCount: new Map(), makerCount: new Map(), eol: [] };
       const concurrencyLimit = 4;
@@ -1587,14 +1781,17 @@
       const firstDoc = new DOMParser().parseFromString(firstPageText, "text/html");
       let lastPage = 1;
       const lastPageElm = firstDoc.querySelector(".page_no ul li:last-child a");
-      if (lastPageElm) { lastPage = parseInt(lastPageElm.dataset.value); }
-      await dataProcessor.processPage(firstDoc, result, detailMode);
+      if (lastPageElm) {
+        const parsedLast = parseInt(lastPageElm.dataset.value, 10);
+        if (!isNaN(parsedLast) && parsedLast > 0) lastPage = parsedLast;
+      }
+      await dataProcessor.processPage(firstDoc, result, detailMode, shouldAbort);
       const remainingPages = Math.max(0, lastPage - 1);
       const totalBatches = Math.ceil(remainingPages / concurrencyLimit) + 1;
       let currentBatch = 1;
       updateProgressCallback(currentBatch, totalBatches);
       let nextPage = 2;
-      while (nextPage <= lastPage) {
+      while (nextPage <= lastPage && !shouldAbort()) {
         const batchTasks = [];
         for (let i = 0; i < concurrencyLimit && nextPage <= lastPage; i++, nextPage++) {
           const pageNum = nextPage;
@@ -1603,7 +1800,7 @@
               const pageText = await dataProcessor.fetchPageWithRetry(dlurl, pageNum);
               if (!pageText) return;
               const doc = new DOMParser().parseFromString(pageText, "text/html");
-              await dataProcessor.processPage(doc, result, detailMode);
+              await dataProcessor.processPage(doc, result, detailMode, shouldAbort);
             } catch (e) {
               dataProcessor._errorLogs.push(`Error fetching page ${pageNum}: ${e}`);
             }
@@ -1773,6 +1970,7 @@
       return element;
     },
     injectStyles() {
+      if (document.getElementById("DLsiteStyle")) return;
       const style = document.createElement("style");
       style.id = "DLsiteStyle";
       style.textContent = `
@@ -2047,9 +2245,13 @@
       if (!document.getElementById("DLsiteStyle")) {
         ui.injectStyles();
       }
+      // cleanup() removes the language switcher (it is in the teardown id list),
+      // so it must be re-created here or the user can no longer switch language.
+      ui.addLanguageSwitcher();
       const renderCharts = async () => {
         if (appState.showCharts) {
-          await charts.loadChartJS();
+          const chartReady = await charts.loadChartJS();
+          if (!chartReady) return;
           if (appState.detailMode) {
             charts.drawGenreChart(appState.filteredGenreCount, appState.result.works, charts.getChartType("genreChart") || "bar");
           }
@@ -2108,7 +2310,7 @@
       compareBtn.style.zIndex = "100001";
       compareBtn.setAttribute("aria-label", i18n.t("compare"));
       ui.addManagedListener(compareBtn, "click", async () => {
-        let availableDates = [...new Set(result.works.map(work => new Date(work.date).toISOString().slice(0,10)))].sort();
+        let availableDates = [...new Set(result.works.map(work => utils.toDateKey(work.date)).filter(Boolean))].sort();
         const periods = await modal.customSelectPeriods(availableDates);
         if (periods) {
           compareAllAspects(result, periods, exchangeRate, periods.aspects);
@@ -2165,6 +2367,7 @@
   };
 
   const main = async () => {
+    appState.aborted = false;
     cleanup();
     ui.addLanguageSwitcher();
     const isValidDLsitePage = () => {
@@ -2205,7 +2408,7 @@
         { label: i18n.t("mangaFemale"), value: "11" }
       ];
       const typeChoice = await modal.customChoice(i18n.t("selectTypePrompt"), typeOptionsArr);
-      if (typeChoice === "0") dlurl = dlurl.replace(/type\/[^/]+/, "type/all");
+      if (!typeChoice || typeChoice === "0") dlurl = dlurl.replace(/type\/[^/]+/, "type/all");
       else dlurl = dlurl.replace(/type\/[^/]+/, `type/${typeChoice}`);
     } else {
       dlurl = dlurl.replace(/type\/[^/]+/, "type/all");
@@ -2214,7 +2417,8 @@
       await i18n.fetchExchangeRates();
     }
     const currencyConfig = i18n.getCurrencyConfig();
-    let exchangeRate = currencyConfig.rate;
+    const savedRate = appState.customRates[i18n.current];
+    let exchangeRate = typeof savedRate === "number" ? savedRate : currencyConfig.rate;
     appState.currencyLang = i18n.current;
     if (i18n.current !== "ja") {
       const rateSource = currencyConfig.apiDate ? `Frankfurter (${currencyConfig.apiDate})` : i18n.t("fallbackRate");
@@ -2226,20 +2430,48 @@
         const promptText = i18n.current === "en" ? i18n.t("ratePromptUsd") : i18n.t("enterRatePrompt");
         const newExchangeRateStr = await modal.customPrompt(promptText, exchangeRate.toString());
         const newExchangeRate = parseFloat(newExchangeRateStr);
-        if (!isNaN(newExchangeRate) && newExchangeRate > 0) exchangeRate = newExchangeRate;
-        else utils.styledLog(i18n.t("invalidRate"), "color: red; font-weight: bold;", "error");
+        if (!isNaN(newExchangeRate) && newExchangeRate > 0) {
+          exchangeRate = newExchangeRate;
+          // Remember the custom rate per language across reloads.
+          appState.customRates[i18n.current] = exchangeRate;
+          appState.saveCustomRates();
+        } else {
+          utils.styledLog(i18n.t("invalidRate"), "color: red; font-weight: bold;", "error");
+        }
       } else {
+        exchangeRate = currencyConfig.rate;
         utils.styledLog(i18n.t("usingApiRate", { rate: exchangeRate }), "color: green; font-weight: bold;", "info");
       }
     } else {
       exchangeRate = 1;
     }
-    appState.customRates[i18n.current] = exchangeRate;
+    const cancelBtn = document.createElement("button");
+    cancelBtn.id = "cancelBtn";
+    cancelBtn.textContent = i18n.t("cancel");
+    cancelBtn.className = "btn";
+    cancelBtn.style.position = "fixed";
+    cancelBtn.style.top = "90px";
+    cancelBtn.style.left = "10px";
+    cancelBtn.style.zIndex = "100001";
+    cancelBtn.style.background = "#e53935";
+    cancelBtn.setAttribute("aria-label", i18n.t("cancel"));
+    ui.addManagedListener(cancelBtn, "click", () => {
+      appState.aborted = true;
+      cancelBtn.disabled = true;
+      cancelBtn.style.opacity = "0.6";
+    });
+    document.body.appendChild(cancelBtn);
+    ui.trackElement(cancelBtn);
+
     console.group(`📄 ${i18n.t("progressGroup")}`);
     const result = await dataProcessor.fetchAllPages(dlurl, detailMode, (currentBatch, totalBatches) => {
       ui.updateProgressBar((currentBatch / totalBatches) * 100, currentBatch, totalBatches);
-    }, ui.errorLogs);
+    }, ui.errorLogs, () => appState.aborted);
     console.groupEnd();
+    utils.cleanElement(cancelBtn);
+    if (appState.aborted) {
+      utils.styledLog(`⏹ ${i18n.t("aborted")}`, "color: #ff8c00; font-weight: bold;", "warn");
+    }
     const excludeResponse = await modal.customPrompt(i18n.t("excludePrompt"), "0");
     let excludeThreshold = 0;
     if (excludeResponse) {
@@ -2267,19 +2499,22 @@
     appState.excludeThreshold = excludeThreshold;
     appState.detailMode = detailMode;
     if (appState.showCharts) {
-      await charts.loadChartJS();
-      if (detailMode) {
-        charts.drawGenreChart(filteredGenreCount, result.works, "bar");
+      const chartReady = await charts.loadChartJS();
+      if (chartReady) {
+        if (detailMode) {
+          charts.drawGenreChart(filteredGenreCount, result.works, "bar");
+        }
+        charts.drawMakerChart(filteredMakerCount, result.works, "bar");
+        charts.drawTimelineChart(result.works);
+        charts.drawCumulativeChart(result.works);
+      } else {
+        appState.showCharts = false;
       }
-      charts.drawMakerChart(filteredMakerCount, result.works, "bar");
-      charts.drawTimelineChart(result.works);
-      charts.drawCumulativeChart(result.works);
     }
     displayResults(result, exchangeRate, filteredGenreCount, filteredMakerCount, excludeThreshold);
     ui.addCompareButton(result, exchangeRate);
     downloadContent.addDownloadButton(result, exchangeRate, filteredGenreCount, filteredMakerCount);
     ui.addResetButton();
-    console.clear();
   };
 
   const displayResults = (result, exchangeRate, filteredGenreCount, filteredMakerCount, excludeThreshold = 0) => {
@@ -2409,32 +2644,30 @@
     authorContainer.appendChild(p2);
     contentDiv.appendChild(ui.createCollapsibleSection(i18n.t("authorInfo"), authorContainer, false));
 
+    // Build O(1) link lookups once. Previously every work's genre/maker triggered a
+    // linear scan of result.genreCount/makerCount (O(works x entries)), which was
+    // the main filter-time bottleneck on large libraries.
+    const genreLinkIndex = new Map();
+    const makerLinkIndex = new Map();
+    if (result.genreCount instanceof Map) {
+      result.genreCount.forEach((entry, g) => genreLinkIndex.set(g, entry));
+    } else if (Array.isArray(result.genreCount)) {
+      result.genreCount.forEach(([g, entry]) => genreLinkIndex.set(g, entry));
+    }
+    if (result.makerCount instanceof Map) {
+      result.makerCount.forEach((entry, m) => makerLinkIndex.set(m, entry));
+    } else if (Array.isArray(result.makerCount)) {
+      result.makerCount.forEach(([m, entry]) => makerLinkIndex.set(m, entry));
+    }
+
     const computeCounts = (works) => {
       const genreMap = new Map();
       const makerMap = new Map();
       const applyThreshold = (entries) => excludeThreshold === 0 ? entries : entries.filter(([, entry]) => entry.count >= excludeThreshold);
 
-      const findGenreEntry = (genre) => {
-        if (result.genreCount instanceof Map) return result.genreCount.get(genre);
-        if (Array.isArray(result.genreCount)) {
-          const entry = result.genreCount.find(item => item[0] === genre);
-          return entry ? entry[1] : null;
-        }
-        return null;
-      };
-
-      const findMakerEntry = (maker) => {
-        if (result.makerCount instanceof Map) return result.makerCount.get(maker);
-        if (Array.isArray(result.makerCount)) {
-          const entry = result.makerCount.find(item => item[0] === maker);
-          return entry ? entry[1] : null;
-        }
-        return null;
-      };
-
       const addGenre = (genre) => {
         if (!genre) return;
-        const originEntry = findGenreEntry(genre);
+        const originEntry = genreLinkIndex.get(genre);
         const link = originEntry && originEntry.link ? originEntry.link : "";
         const existing = genreMap.get(genre) || { count: 0, link };
         existing.count++;
@@ -2443,11 +2676,17 @@
       };
 
       works.forEach(work => {
-        addGenre(work.genre);
-        if (Array.isArray(work.mainGenre)) {
-          work.mainGenre.forEach(g => addGenre(g));
-        }
-        const makerOrigin = findMakerEntry(work.makerName);
+        // De-duplicate genres per work so a string that is both the top-level
+        // category and a tag is not double-counted.
+        const seen = new Set();
+        const addUniqueGenre = (genre) => {
+          if (!genre || seen.has(genre)) return;
+          seen.add(genre);
+          addGenre(genre);
+        };
+        addUniqueGenre(work.genre);
+        if (Array.isArray(work.mainGenre)) work.mainGenre.forEach(addUniqueGenre);
+        const makerOrigin = makerLinkIndex.get(work.makerName);
         const makerLink = makerOrigin && makerOrigin.link ? makerOrigin.link : "";
         const makerEntry = makerMap.get(work.makerName) || { count: 0, link: makerLink };
         makerEntry.count++;
@@ -2465,6 +2704,45 @@
         filteredMakerCount: applyThreshold(makerArray)
       };
     };
+
+    const timelineIsVisible = () => {
+      const content = timelineSection.querySelector(".collapsible-content");
+      return !!content && content.style.display !== "none";
+    };
+
+    let currentTimelineWorks = result.works;
+
+    const renderTimeline = (works) => {
+      timelineContent.innerHTML = "";
+      if (works.length === 0) {
+        const empty = document.createElement("p");
+        empty.textContent = i18n.t("noData");
+        timelineContent.appendChild(empty);
+        return;
+      }
+      const { groups: tlGroups, sortedDates: tlSortedDates } = utils.groupByDay(works, (acc, w) => { acc.push(w); return acc; }, () => []);
+      const fragment = document.createDocumentFragment();
+      tlSortedDates.forEach(date => {
+        const section = document.createElement("div");
+        const title = document.createElement("strong");
+        title.textContent = `${date} (${tlGroups[date].length} ${i18n.t("workCount")})`;
+        section.appendChild(title);
+        const table = createTable(
+          [i18n.t("workNameLabel"), i18n.t("workMakerLabel"), i18n.t("valueLabel")],
+          tlGroups[date].map(work => [work.name, work.makerName, currencyHelper.format(work.price, exchangeRate)])
+        );
+        section.appendChild(table);
+        fragment.appendChild(section);
+      });
+      timelineContent.appendChild(fragment);
+    };
+
+    // The timeline section starts collapsed, so skip building its (potentially huge)
+    // DOM on every filter pass; build it on first expansion instead.
+    const timelineHeader = timelineSection.querySelector(".collapsible-header");
+    ui.addManagedListener(timelineHeader, "click", () => {
+      if (timelineIsVisible()) renderTimeline(currentTimelineWorks);
+    });
 
     const renderSections = (works, genreCountArr, makerCountArr) => {
       overviewContent.innerHTML = "";
@@ -2529,7 +2807,7 @@
       eolContent.innerHTML = "";
       const eolWorks = works.filter(work => !work.url);
       if (eolWorks.length > 0) {
-        const eolRows = eolWorks.map(eol => [eol.date, eol.makerName, eol.name, i18n.t("priceYen", { amount: eol.price })]);
+        const eolRows = eolWorks.map(eol => [eol.date, eol.makerName, eol.name, currencyHelper.format(eol.price, exchangeRate)]);
         const eolTable = createTable([i18n.t("purchaseDate"), i18n.t("workMakerLabel"), i18n.t("workNameLabel"), i18n.t("valueLabel")], eolRows);
         eolContent.appendChild(eolTable);
       } else {
@@ -2538,25 +2816,11 @@
         eolContent.appendChild(noEol);
       }
 
-      timelineContent.innerHTML = "";
-      if (works.length === 0) {
-        const empty = document.createElement("p");
-        empty.textContent = i18n.t("noData");
-        timelineContent.appendChild(empty);
+      currentTimelineWorks = works;
+      if (timelineIsVisible()) {
+        renderTimeline(works);
       } else {
-        const { groups: tlGroups, sortedDates: tlSortedDates } = utils.groupByDay(works, (acc, w) => { acc.push(w); return acc; }, () => []);
-        tlSortedDates.forEach(date => {
-          const section = document.createElement("div");
-          const title = document.createElement("strong");
-          title.textContent = `${date} (${tlGroups[date].length} ${i18n.t("workCount")})`;
-          section.appendChild(title);
-          const table = createTable(
-            [i18n.t("workNameLabel"), i18n.t("workMakerLabel"), i18n.t("valueLabel")],
-            tlGroups[date].map(work => [work.name, work.makerName, i18n.t("priceYen", { amount: work.price })])
-          );
-          section.appendChild(table);
-          timelineContent.appendChild(section);
-        });
+        timelineContent.innerHTML = "";
       }
     };
     
@@ -2578,26 +2842,35 @@
       }
     };
 
+    // Precompute lowercased names + parsed dates once, so filtering doesn't re-do
+    // that work on every debounced keystroke.
+    const indexedWorks = result.works.map(work => ({
+      work,
+      nameLower: (work.name || "").toLowerCase(),
+      date: utils.parseWorkDate(work.date)
+    }));
+
     const getFilteredWorks = () => {
       const keyword = keywordInput.value.trim().toLowerCase();
       const maker = makerSelect.value;
-      const startDate = startDateInput.value ? new Date(startDateInput.value) : null;
-      const endDate = endDateInput.value ? new Date(endDateInput.value) : null;
+      // Parse date inputs as local dates (native parsing treats YYYY-MM-DD as UTC).
+      const startDate = startDateInput.value ? utils.parseLocalDate(startDateInput.value) : null;
+      const endDate = endDateInput.value ? utils.parseLocalDate(endDateInput.value) : null;
       if (endDate) endDate.setHours(23, 59, 59, 999);
       const minPrice = parseInt(minPriceInput.value, 10);
       const maxPrice = parseInt(maxPriceInput.value, 10);
 
-      return result.works.filter(work => {
-        const nameMatch = !keyword || work.name.toLowerCase().includes(keyword);
-        const makerMatch = !maker || work.makerName === maker;
-        const workDate = new Date(work.date);
-        const validDate = workDate.toString() !== "Invalid Date";
-        const startMatch = !startDate || (validDate && workDate >= startDate);
-        const endMatch = !endDate || (validDate && workDate <= endDate);
-        const minMatch = isNaN(minPrice) || work.price >= minPrice;
-        const maxMatch = isNaN(maxPrice) || work.price <= maxPrice;
-        return nameMatch && makerMatch && startMatch && endMatch && minMatch && maxMatch;
+      const filtered = [];
+      indexedWorks.forEach(({ work, nameLower, date }) => {
+        if (keyword && !nameLower.includes(keyword)) return;
+        if (maker && work.makerName !== maker) return;
+        if (startDate && !(date && date >= startDate)) return;
+        if (endDate && !(date && date <= endDate)) return;
+        if (!isNaN(minPrice) && work.price < minPrice) return;
+        if (!isNaN(maxPrice) && work.price > maxPrice) return;
+        filtered.push(work);
       });
+      return filtered;
     };
 
     let lastFilteredWorks = result.works.slice();
@@ -2671,5 +2944,7 @@
   };
 
   ui.injectStyles();
-  main();
+  main().catch(e => {
+    utils.styledLog(`❌ ${i18n.t("errorLogTitle")}: ${e && e.message ? e.message : e}`, "color: red; font-weight: bold;", "error");
+  });
 })();

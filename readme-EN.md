@@ -45,6 +45,7 @@
 - **Draggable windows** — Move and resize chart and result windows
 - **Trilingual UI** — Switch between Chinese, English, and Japanese — rates remembered per language
 - **Progress feedback** — On-page progress bar + console batch updates
+- **Cancellable fetch** — Stop mid-scrape at any time; partial results are kept
 
 </td>
 </tr>
@@ -100,7 +101,7 @@ DLsite.js (single-file IIFE, ~2600 lines)
 ├─ modal              Custom modal system
 ├─ charts             Chart.js lifecycle management
 ├─ compareAllAspects  Two-period comparison engine
-├─ dataProcessor      Paginated fetch (4 concurrent, 2 retries) + HTML parsing
+├─ dataProcessor      Paginated fetch (4-concurrent list / throttled details, exponential backoff) + HTML parsing
 ├─ downloadContent    Markdown / CSV / JSON export
 │
 ├─ ui                 CSS injection · Progress bar · Language switcher · Button management

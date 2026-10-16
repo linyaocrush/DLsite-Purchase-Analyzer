@@ -45,6 +45,7 @@
 - **可拖拽窗口** — 图表与结果窗口支持拖拽移动和缩放
 - **三语界面** — 中文 / English / 日本語 随时切换，汇率独立记忆
 - **进度反馈** — 页面进度条 + 控制台分页提示
+- **可中止抓取** — 抓取过程中可随时点击取消，保留已获取的部分结果
 
 </td>
 </tr>
@@ -100,7 +101,7 @@ DLsite.js（单文件 IIFE，~2600 行）
 ├─ modal              自定义弹窗系统
 ├─ charts             Chart.js 图表生命周期管理
 ├─ compareAllAspects  时间段对比引擎
-├─ dataProcessor      分页抓取（4 并发，2 次重试）+ HTML 解析
+├─ dataProcessor      分页抓取（列表 4 并发 / 详情限流，指数退避重试）+ HTML 解析
 ├─ downloadContent    Markdown / CSV / JSON 导出
 │
 ├─ ui                 样式注入 · 进度条 · 语言切换器 · 按钮管理
