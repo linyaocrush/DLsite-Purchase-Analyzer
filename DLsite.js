@@ -98,6 +98,21 @@
         element.parentNode.removeChild(element);
       }
     },
+    clearChildren(element) {
+      while (element.firstChild) element.removeChild(element.firstChild);
+    },
+    // Increment a { count, link } entry in a Map, filling in a missing link.
+    // Unlike the genre path, callers may legitimately use an empty key (e.g. a
+    // work with no maker), so empty keys are NOT skipped here.
+    bumpCount(map, key, link) {
+      let entry = map.get(key);
+      if (!entry) {
+        entry = { count: 0, link: link || "" };
+        map.set(key, entry);
+      }
+      entry.count++;
+      if (!entry.link && link) entry.link = link;
+    },
     groupByDay(works, reducer, factory) {
       const groups = {};
       works.forEach(work => {
@@ -766,6 +781,47 @@
         });
       });
     },
+    // Build a labelled button. Modals are removed from the DOM on close, so plain
+    // listeners (not the managed registry) are used, matching the original code.
+    makeButton(text, onClick, ariaLabel = text) {
+      const btn = document.createElement("button");
+      btn.textContent = text;
+      btn.className = "btn";
+      btn.setAttribute("aria-label", ariaLabel);
+      if (onClick) btn.addEventListener("click", onClick);
+      return btn;
+    },
+    makeButtonRow(buttons, marginTop = "15px") {
+      const row = document.createElement("div");
+      row.style.marginTop = marginTop;
+      buttons.forEach(btn => row.appendChild(btn));
+      return row;
+    },
+    // A period block: a label plus identical start/end date selects.
+    makePeriodGroup(labelText, availableDates) {
+      const container = document.createElement("div");
+      container.style.margin = "10px 0";
+      const label = document.createElement("div");
+      label.textContent = labelText;
+      container.appendChild(label);
+      const makeDateSelect = () => {
+        const select = document.createElement("select");
+        availableDates.forEach(date => {
+          const option = document.createElement("option");
+          option.value = date;
+          option.textContent = date;
+          select.appendChild(option);
+        });
+        return select;
+      };
+      const startSelect = makeDateSelect();
+      container.appendChild(document.createTextNode(i18n.t("startDate") + " "));
+      container.appendChild(startSelect);
+      const endSelect = makeDateSelect();
+      container.appendChild(document.createTextNode(" " + i18n.t("endDate") + " "));
+      container.appendChild(endSelect);
+      return { container, startSelect, endSelect };
+    },
     setupAccessibility(overlay, modalContainer, onClose) {
       const focusSelectors = "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])";
       const getFocusable = () => Array.from(overlay.querySelectorAll(focusSelectors)).filter(el => !el.disabled && el.offsetParent !== null);
@@ -801,9 +857,22 @@
         }
       }, 0);
     },
+    // Shared skeleton: create the modal, a close() resolver, and wire accessibility.
+    _dialog(maxWidth, message, buildBody) {
+      return new Promise(resolve => {
+        const { overlay, modalContainer } = modal.createModal(maxWidth);
+        const close = (value) => modal.closeModal(overlay, modalContainer, () => resolve(value));
+        const msgDiv = document.createElement("div");
+        msgDiv.textContent = message;
+        modalContainer.appendChild(msgDiv);
+        buildBody(modalContainer, close);
+        modal.setupAccessibility(overlay, modalContainer, () => close(null));
+      });
+    },
     customAlert(message, extraInfo = null) {
       return new Promise(resolve => {
         const { overlay, modalContainer } = modal.createModal("600px");
+        const close = () => modal.closeModal(overlay, modalContainer, resolve);
         const msgDiv = document.createElement("pre");
         msgDiv.style.textAlign = "left";
         msgDiv.style.maxHeight = "400px";
@@ -817,23 +886,12 @@
           extra.setAttribute("aria-label", extraInfo);
           modalContainer.appendChild(extra);
         }
-        const btn = document.createElement("button");
-        btn.textContent = i18n.t("ok");
-        btn.className = "btn";
-        btn.setAttribute("aria-label", i18n.t("ok"));
-        btn.addEventListener("click", () => {
-          modal.closeModal(overlay, modalContainer, resolve);
-        });
-        modal.setupAccessibility(overlay, modalContainer, () => modal.closeModal(overlay, modalContainer, resolve));
-        modalContainer.appendChild(btn);
+        modalContainer.appendChild(modal.makeButton(i18n.t("ok"), close));
+        modal.setupAccessibility(overlay, modalContainer, close);
       });
     },
     customPrompt(message, defaultValue = "") {
-      return new Promise(resolve => {
-        const { overlay, modalContainer } = modal.createModal("400px");
-        const msgDiv = document.createElement("div");
-        msgDiv.textContent = message;
-        modalContainer.appendChild(msgDiv);
+      return modal._dialog("400px", message, (modalContainer, close) => {
         const input = document.createElement("input");
         input.type = "text";
         input.value = defaultValue;
@@ -842,129 +900,40 @@
         input.style.padding = "5px";
         input.setAttribute("aria-label", message);
         modalContainer.appendChild(input);
-        const btnContainer = document.createElement("div");
-        btnContainer.style.marginTop = "15px";
-        const okBtn = document.createElement("button");
-        okBtn.textContent = i18n.t("ok");
-        okBtn.className = "btn";
-        okBtn.setAttribute("aria-label", i18n.t("ok"));
-        const cancelBtn = document.createElement("button");
-        cancelBtn.textContent = i18n.t("cancel");
-        cancelBtn.className = "btn";
-        cancelBtn.setAttribute("aria-label", i18n.t("cancel"));
-        okBtn.addEventListener("click", () => {
-          modal.closeModal(overlay, modalContainer, () => { resolve(input.value); });
-        });
-        cancelBtn.addEventListener("click", () => {
-          modal.closeModal(overlay, modalContainer, () => { resolve(null); });
-        });
-        btnContainer.appendChild(okBtn);
-        btnContainer.appendChild(cancelBtn);
-        modalContainer.appendChild(btnContainer);
-        modal.setupAccessibility(overlay, modalContainer, () => modal.closeModal(overlay, modalContainer, () => resolve(null)));
+        modalContainer.appendChild(modal.makeButtonRow([
+          modal.makeButton(i18n.t("ok"), () => close(input.value)),
+          modal.makeButton(i18n.t("cancel"), () => close(null))
+        ]));
       });
     },
     customConfirm(message) {
-      return new Promise(resolve => {
-        const { overlay, modalContainer } = modal.createModal("400px");
-        const msgDiv = document.createElement("div");
-        msgDiv.textContent = message;
-        modalContainer.appendChild(msgDiv);
-        const btnContainer = document.createElement("div");
-        btnContainer.style.marginTop = "15px";
-        const okBtn = document.createElement("button");
-        okBtn.textContent = i18n.t("ok");
-        okBtn.className = "btn";
-        okBtn.setAttribute("aria-label", i18n.t("ok"));
-        const cancelBtn = document.createElement("button");
-        cancelBtn.textContent = i18n.t("cancel");
-        cancelBtn.className = "btn";
-        cancelBtn.setAttribute("aria-label", i18n.t("cancel"));
-        okBtn.addEventListener("click", () => {
-          modal.closeModal(overlay, modalContainer, () => { resolve(true); });
-        });
-        cancelBtn.addEventListener("click", () => {
-          modal.closeModal(overlay, modalContainer, () => { resolve(false); });
-        });
-        btnContainer.appendChild(okBtn);
-        btnContainer.appendChild(cancelBtn);
-        modalContainer.appendChild(btnContainer);
-        modal.setupAccessibility(overlay, modalContainer, () => modal.closeModal(overlay, modalContainer, () => resolve(false)));
+      return modal._dialog("400px", message, (modalContainer, close) => {
+        modalContainer.appendChild(modal.makeButtonRow([
+          modal.makeButton(i18n.t("ok"), () => close(true)),
+          modal.makeButton(i18n.t("cancel"), () => close(false))
+        ]));
       });
     },
     customChoice(message, options) {
-      return new Promise(resolve => {
-        const { overlay, modalContainer } = modal.createModal("500px");
-        const msgDiv = document.createElement("div");
-        msgDiv.textContent = message;
-        modalContainer.appendChild(msgDiv);
+      return modal._dialog("500px", message, (modalContainer, close) => {
         const btnContainer = document.createDocumentFragment();
-        options.forEach(opt => {
-          const btn = document.createElement("button");
-          btn.textContent = opt.label;
-          btn.className = "btn";
-          btn.setAttribute("aria-label", opt.label);
-          btn.addEventListener("click", () => { modal.closeModal(overlay, modalContainer, () => { resolve(opt.value); }); });
-          btnContainer.appendChild(btn);
-        });
+        options.forEach(opt => btnContainer.appendChild(modal.makeButton(opt.label, () => close(opt.value))));
         modalContainer.appendChild(btnContainer);
-        modal.setupAccessibility(overlay, modalContainer, () => modal.closeModal(overlay, modalContainer, () => resolve(null)));
       });
     },
     customSelectPeriods(availableDates) {
       return new Promise(resolve => {
         const { overlay, modalContainer } = modal.createModal("500px");
+        const close = (value) => modal.closeModal(overlay, modalContainer, () => resolve(value));
         const title = document.createElement("h2");
         title.textContent = i18n.t("periodTitle");
         modalContainer.appendChild(title);
-        const period1Container = document.createElement("div");
-        period1Container.style.margin = "10px 0";
-        const period1Label = document.createElement("div");
-        period1Label.textContent = i18n.t("period1");
-        period1Container.appendChild(period1Label);
-        const period1StartSelect = document.createElement("select");
-        availableDates.forEach(date => {
-          const option = document.createElement("option");
-          option.value = date;
-          option.textContent = date;
-          period1StartSelect.appendChild(option);
-        });
-        period1Container.appendChild(document.createTextNode(i18n.t("startDate") + " "));
-        period1Container.appendChild(period1StartSelect);
-        const period1EndSelect = document.createElement("select");
-        availableDates.forEach(date => {
-          const option = document.createElement("option");
-          option.value = date;
-          option.textContent = date;
-          period1EndSelect.appendChild(option);
-        });
-        period1Container.appendChild(document.createTextNode(" " + i18n.t("endDate") + " "));
-        period1Container.appendChild(period1EndSelect);
-        modalContainer.appendChild(period1Container);
-        const period2Container = document.createElement("div");
-        period2Container.style.margin = "10px 0";
-        const period2Label = document.createElement("div");
-        period2Label.textContent = i18n.t("period2");
-        period2Container.appendChild(period2Label);
-        const period2StartSelect = document.createElement("select");
-        availableDates.forEach(date => {
-          const option = document.createElement("option");
-          option.value = date;
-          option.textContent = date;
-          period2StartSelect.appendChild(option);
-        });
-        period2Container.appendChild(document.createTextNode(i18n.t("startDate") + " "));
-        period2Container.appendChild(period2StartSelect);
-        const period2EndSelect = document.createElement("select");
-        availableDates.forEach(date => {
-          const option = document.createElement("option");
-          option.value = date;
-          option.textContent = date;
-          period2EndSelect.appendChild(option);
-        });
-        period2Container.appendChild(document.createTextNode(" " + i18n.t("endDate") + " "));
-        period2Container.appendChild(period2EndSelect);
-        modalContainer.appendChild(period2Container);
+
+        const period1 = modal.makePeriodGroup(i18n.t("period1"), availableDates);
+        const period2 = modal.makePeriodGroup(i18n.t("period2"), availableDates);
+        modalContainer.appendChild(period1.container);
+        modalContainer.appendChild(period2.container);
+
         const aspectsContainer = document.createElement("div");
         aspectsContainer.style.margin = "10px 0";
         const aspectsTitle = document.createElement("div");
@@ -992,56 +961,32 @@
           aspectsContainer.appendChild(document.createElement("br"));
         });
         modalContainer.appendChild(aspectsContainer);
-        const btnContainer = document.createElement("div");
-        btnContainer.style.marginTop = "15px";
-        const okBtn = document.createElement("button");
-        okBtn.textContent = i18n.t("ok");
-        okBtn.className = "btn";
-        const cancelBtn = document.createElement("button");
-        cancelBtn.textContent = i18n.t("cancel");
-        cancelBtn.className = "btn";
-        btnContainer.appendChild(okBtn);
-        btnContainer.appendChild(cancelBtn);
-        modalContainer.appendChild(btnContainer);
-        okBtn.addEventListener("click", () => {
-          const p1Start = period1StartSelect.value;
-          const p1End = period1EndSelect.value;
-          const p2Start = period2StartSelect.value;
-          const p2End = period2EndSelect.value;
+
+        const okBtn = modal.makeButton(i18n.t("ok"), () => {
           // Parse as local dates and include the whole end day, otherwise works on
           // the end date are excluded (UTC-midnight comparison / no end-of-day).
-          const p1StartDate = utils.parseLocalDate(p1Start);
-          const p1EndDate = utils.parseLocalDate(p1End);
-          const p2StartDate = utils.parseLocalDate(p2Start);
-          const p2EndDate = utils.parseLocalDate(p2End);
+          const p1StartDate = utils.parseLocalDate(period1.startSelect.value);
+          const p1EndDate = utils.parseLocalDate(period1.endSelect.value);
+          const p2StartDate = utils.parseLocalDate(period2.startSelect.value);
+          const p2EndDate = utils.parseLocalDate(period2.endSelect.value);
           if (p1EndDate) p1EndDate.setHours(23, 59, 59, 999);
           if (p2EndDate) p2EndDate.setHours(23, 59, 59, 999);
-          if(p1StartDate > p1EndDate){
-            modal.customAlert(i18n.t("period1Invalid"));
-            return;
-          }
-          if(p2StartDate > p2EndDate){
-            modal.customAlert(i18n.t("period2Invalid"));
-            return;
-          }
-          const selectedAspects = {
-            prefType: checkboxes["prefType"].checked,
-            prefMaker: checkboxes["prefMaker"].checked,
-            makerOverall: checkboxes["makerOverall"].checked,
-            makerType: checkboxes["makerType"].checked
-          };
-          modal.closeModal(overlay, modalContainer, () => {
-            resolve({
-              period1: { start: p1StartDate, end: p1EndDate },
-              period2: { start: p2StartDate, end: p2EndDate },
-              aspects: selectedAspects
-            });
+          if (p1StartDate > p1EndDate) { modal.customAlert(i18n.t("period1Invalid")); return; }
+          if (p2StartDate > p2EndDate) { modal.customAlert(i18n.t("period2Invalid")); return; }
+          close({
+            period1: { start: p1StartDate, end: p1EndDate },
+            period2: { start: p2StartDate, end: p2EndDate },
+            aspects: {
+              prefType: checkboxes.prefType.checked,
+              prefMaker: checkboxes.prefMaker.checked,
+              makerOverall: checkboxes.makerOverall.checked,
+              makerType: checkboxes.makerType.checked
+            }
           });
         });
-        cancelBtn.addEventListener("click", () => {
-          modal.closeModal(overlay, modalContainer, () => { resolve(null); });
-        });
-        modal.setupAccessibility(overlay, modalContainer, () => modal.closeModal(overlay, modalContainer, () => resolve(null)));
+        const cancelBtn = modal.makeButton(i18n.t("cancel"), () => close(null));
+        modalContainer.appendChild(modal.makeButtonRow([okBtn, cancelBtn]));
+        modal.setupAccessibility(overlay, modalContainer, () => close(null));
       });
     }
   };
@@ -1095,66 +1040,48 @@
         container.id = id;
         container.dataset.title = title;
         container.className = "chart-container";
-        container.style.top = top;
-        container.style.left = left;
-        container.style.width = width;
-        container.style.height = height;
-        container.style.minWidth = "300px";
-        container.style.minHeight = "250px";
-        container.style.resize = "both";
-        container.style.overflow = "hidden";
-        container.style.boxShadow = "0 4px 8px rgba(0,0,0,0.3)";
-        container.style.border = "1px solid #ccc";
-        container.style.zIndex = ui.currentZIndex++;
+        Object.assign(container.style, {
+          top, left, width, height,
+          minWidth: "300px", minHeight: "250px", resize: "both",
+          overflow: "hidden", boxShadow: "0 4px 8px rgba(0,0,0,0.3)",
+          border: "1px solid #ccc", zIndex: ui.currentZIndex++
+        });
         document.body.appendChild(container);
+        // Small absolute-positioned buttons in the chart's top-right corner.
+        const overlayButton = (text, right, onClick) => {
+          const btn = document.createElement("button");
+          btn.textContent = text;
+          btn.className = "btn";
+          Object.assign(btn.style, { position: "absolute", top: "5px", right, zIndex: "101" });
+          btn.setAttribute("aria-label", text);
+          ui.addManagedListener(btn, "click", onClick);
+          container.appendChild(btn);
+          return btn;
+        };
         const dragButton = document.createElement("div");
         dragButton.className = "drag-button";
         dragButton.textContent = "≡";
         dragButton.setAttribute("role", "button");
         dragButton.setAttribute("aria-label", i18n.t("dragHandleLabel"));
         container.appendChild(dragButton);
-        const saveButton = document.createElement("button");
-        saveButton.textContent = i18n.t("save");
-        saveButton.className = "btn";
-        saveButton.style.position = "absolute";
-        saveButton.style.top = "5px";
-        saveButton.style.right = "5px";
-        saveButton.style.zIndex = "101";
-        saveButton.setAttribute("aria-label", i18n.t("save"));
-        ui.addManagedListener(saveButton, "click", () => {
+        overlayButton(i18n.t("save"), "5px", () => {
           const canvas = container.querySelector("canvas");
-          if(canvas){
-            const url = canvas.toDataURL("image/png");
-            utils.downloadFile(container.dataset.title + ".png", url);
-          }
+          if (canvas) utils.downloadFile(container.dataset.title + ".png", canvas.toDataURL("image/png"));
         });
-        container.appendChild(saveButton);
-        const hideButton = document.createElement("button");
-        hideButton.textContent = i18n.t("hide");
-        hideButton.className = "btn";
-        hideButton.style.position = "absolute";
-        hideButton.style.top = "5px";
-        hideButton.style.right = "60px";
-        hideButton.style.zIndex = "101";
-        hideButton.setAttribute("aria-label", i18n.t("hide"));
-        ui.addManagedListener(hideButton, "click", () => {
+        overlayButton(i18n.t("hide"), "60px", () => {
           container.style.display = "none";
           let hiddenContainer = document.getElementById("hiddenChartsContainer");
           if (!hiddenContainer) {
             hiddenContainer = document.createElement("div");
             hiddenContainer.id = "hiddenChartsContainer";
-            hiddenContainer.style.position = "fixed";
-            hiddenContainer.style.right = "10px";
-            hiddenContainer.style.top = "10px";
-            hiddenContainer.style.zIndex = "110000";
+            Object.assign(hiddenContainer.style, { position: "fixed", right: "10px", top: "10px", zIndex: "110000" });
             document.body.appendChild(hiddenContainer);
             ui.trackElement(hiddenContainer);
           }
           const restoreButton = document.createElement("button");
           restoreButton.textContent = container.dataset.title || container.id;
           restoreButton.className = "btn";
-          restoreButton.style.display = "block";
-          restoreButton.style.marginBottom = "5px";
+          Object.assign(restoreButton.style, { display: "block", marginBottom: "5px" });
           restoreButton.setAttribute("aria-label", container.dataset.title || container.id);
           ui.addManagedListener(restoreButton, "click", () => {
             container.style.display = "block";
@@ -1162,7 +1089,6 @@
           });
           hiddenContainer.appendChild(restoreButton);
         });
-        container.appendChild(hideButton);
         ui.addManagedListener(container, "mousedown", () => {
           container.style.zIndex = ui.currentZIndex++;
         });
@@ -1190,15 +1116,35 @@
       chart.options.plugins.legend = isPie ? { display: true } : { display: false };
       chart.update();
     },
-    drawBarPieChart(chartKey, containerId, data, works, filterFn, barColor, title, top, left, newType) {
-      const currentType = newType || charts.getChartType(chartKey) || "bar";
-      const container = charts.createChartContainer(containerId, top, left, "500px", "400px", title);
+    // Clear a chart body and add its centred header + canvas (shared by all charts).
+    _chartShell(containerId, top, left, title, headerText, width = "500px", height = "400px") {
+      const container = charts.createChartContainer(containerId, top, left, width, height, title);
       const contentDiv = container.querySelector(".chart-content");
-      while (contentDiv.firstChild) contentDiv.removeChild(contentDiv.firstChild);
+      utils.clearChildren(contentDiv);
       const header = document.createElement("h3");
       header.style.textAlign = "center";
       header.style.margin = "0";
-      header.textContent = title + " ";
+      header.textContent = headerText;
+      contentDiv.appendChild(header);
+      const canvas = document.createElement("canvas");
+      canvas.style.width = "100%";
+      canvas.style.height = "calc(100% - 30px)";
+      contentDiv.appendChild(canvas);
+      return { container, contentDiv, header, canvas, ctx: canvas.getContext("2d") };
+    },
+    // Popup listing every work bought on a given day.
+    _dayPopup(works, date, showTotal = false) {
+      const worksOnDate = works.filter(work => utils.toDateKey(work.date) === date);
+      let content = `${i18n.t("dateLabel", { date })}\n${i18n.t("purchaseCount", { count: worksOnDate.length })}\n\n`;
+      worksOnDate.forEach(work => {
+        content += `${i18n.t("workNameLabel")}: ${work.name}\n${i18n.t("workMakerLabel")}: ${work.makerName}\n${currencyHelper.format(work.price, appState.exchangeRate)}\n\n`;
+      });
+      const extraInfo = showTotal ? i18n.t("totalDay", { amount: worksOnDate.reduce((sum, w) => sum + w.price, 0) }) : null;
+      modal.customAlert(content, extraInfo);
+    },
+    drawBarPieChart(chartKey, containerId, data, works, filterFn, barColor, title, top, left, newType) {
+      const currentType = newType || charts.getChartType(chartKey) || "bar";
+      const { header, canvas } = charts._chartShell(containerId, top, left, title, title + " ");
       const toggleBtn = document.createElement("button");
       toggleBtn.className = "btn";
       toggleBtn.style.marginLeft = "10px";
@@ -1206,11 +1152,6 @@
       toggleBtn.textContent = currentType === 'bar' ? i18n.t("chartSwitchPie") : i18n.t("chartSwitchBar");
       toggleBtn.setAttribute("aria-label", toggleBtn.textContent);
       header.appendChild(toggleBtn);
-      contentDiv.appendChild(header);
-      const canvas = document.createElement("canvas");
-      canvas.style.width = "100%";
-      canvas.style.height = "calc(100% - 30px)";
-      contentDiv.appendChild(canvas);
       const isPie = currentType === 'pie';
       const backgroundColors = isPie
         ? data.map((_, i) => `hsl(${(i * 360 / data.length)}, 70%, 70%)`)
@@ -1272,35 +1213,14 @@
     drawTimelineChart(works) {
       const { groups, sortedDates } = utils.groupByDay(works, (acc) => acc + 1, () => 0);
       const counts = sortedDates.map(date => groups[date]);
-      const container = charts.createChartContainer("chartContainer3", "550px", "100px", "500px", "400px", i18n.t("chartTimelineTitle"));
-      const contentDiv = container.querySelector(".chart-content");
-      while (contentDiv.firstChild) contentDiv.removeChild(contentDiv.firstChild);
-      const header = document.createElement("h3");
-      header.style.textAlign = "center";
-      header.style.margin = "0";
-      header.textContent = i18n.t("chartTimelineTitle");
-      contentDiv.appendChild(header);
-      const canvas = document.createElement("canvas");
-      canvas.style.width = "100%";
-      canvas.style.height = "calc(100% - 30px)";
-      contentDiv.appendChild(canvas);
-      const ctx = canvas.getContext("2d");
+      const { ctx } = charts._chartShell("chartContainer3", "550px", "100px", i18n.t("chartTimelineTitle"), i18n.t("chartTimelineTitle"));
       const options = {
         scales: {
           x: { title: { display: true, text: i18n.t("purchaseDate") } },
           y: { beginAtZero: true, title: { display: true, text: i18n.t("purchaseCountLabel") } }
         },
         onClick: (evt, elements) => {
-          if (elements.length > 0) {
-            const index = elements[0].index;
-            const date = sortedDates[index];
-            const worksOnDate = works.filter(work => utils.toDateKey(work.date) === date);
-            let content = `${i18n.t("dateLabel", { date })}\n${i18n.t("purchaseCount", { count: worksOnDate.length })}\n\n`;
-            worksOnDate.forEach(work => {
-              content += `${i18n.t("workNameLabel")}: ${work.name}\n${i18n.t("workMakerLabel")}: ${work.makerName}\n${currencyHelper.format(work.price, appState.exchangeRate)}\n\n`;
-            });
-            modal.customAlert(content);
-          }
+          if (elements.length > 0) charts._dayPopup(works, sortedDates[elements[0].index]);
         }
       };
       charts.setChart("timelineChart", new Chart(ctx, {
@@ -1324,36 +1244,14 @@
       let cumulative = [];
       let total = 0;
       sortedDates.forEach(date => { total += groups[date]; cumulative.push(total); });
-      const container = charts.createChartContainer("chartContainer4", "550px", "650px", "500px", "400px", i18n.t("chartCumulativeTitle"));
-      const contentDiv = container.querySelector(".chart-content");
-      while (contentDiv.firstChild) contentDiv.removeChild(contentDiv.firstChild);
-      const header = document.createElement("h3");
-      header.style.textAlign = "center";
-      header.style.margin = "0";
-      header.textContent = i18n.t("chartCumulativeTitle") + " (JPY)";
-      contentDiv.appendChild(header);
-      const canvas = document.createElement("canvas");
-      canvas.style.width = "100%";
-      canvas.style.height = "calc(100% - 30px)";
-      contentDiv.appendChild(canvas);
-      const ctx = canvas.getContext("2d");
+      const { ctx } = charts._chartShell("chartContainer4", "550px", "650px", i18n.t("chartCumulativeTitle"), i18n.t("chartCumulativeTitle") + " (JPY)");
       const options = {
         scales: {
           x: { title: { display: true, text: i18n.t("purchaseDate") } },
           y: { beginAtZero: true, title: { display: true, text: i18n.t("chartCumulativeTitle") } }
         },
         onClick: (evt, elements) => {
-          if (elements.length > 0) {
-            const index = elements[0].index;
-            const date = sortedDates[index];
-            const worksOnDate = works.filter(work => utils.toDateKey(work.date) === date);
-            let content = `${i18n.t("dateLabel", { date })}\n${i18n.t("purchaseCount", { count: worksOnDate.length })}\n\n`;
-            worksOnDate.forEach(work => {
-              content += `${i18n.t("workNameLabel")}: ${work.name}\n${i18n.t("workMakerLabel")}: ${work.makerName}\n${currencyHelper.format(work.price, appState.exchangeRate)}\n\n`;
-            });
-            const dayTotal = worksOnDate.reduce((sum, work) => sum + work.price, 0);
-            modal.customAlert(content, i18n.t("totalDay", { amount: dayTotal }));
-          }
+          if (elements.length > 0) charts._dayPopup(works, sortedDates[elements[0].index], true);
         }
       };
       charts.setChart("cumulativeChart", new Chart(ctx, {
@@ -1381,19 +1279,7 @@
       let containerId = "comparisonChart_" + (ui.comparisonCounter++);
       let top = (150 + ui.comparisonCounter * 20) + "px";
       let left = (150 + ui.comparisonCounter * 20) + "px";
-      const container = charts.createChartContainer(containerId, top, left, "600px", "400px", title);
-      const contentDiv = container.querySelector(".chart-content");
-      while (contentDiv.firstChild) contentDiv.removeChild(contentDiv.firstChild);
-      const header = document.createElement("h3");
-      header.style.textAlign = "center";
-      header.style.margin = "0";
-      header.textContent = title;
-      contentDiv.appendChild(header);
-      const canvas = document.createElement("canvas");
-      canvas.style.width = "100%";
-      canvas.style.height = "calc(100% - 30px)";
-      contentDiv.appendChild(canvas);
-      const ctx = canvas.getContext("2d");
+      const { ctx } = charts._chartShell(containerId, top, left, title, title, "600px", "400px");
       charts.setChart(containerId, new Chart(ctx, {
         type: 'bar',
         data: {
@@ -1454,12 +1340,13 @@
     const period1Works = filterByPeriod(result.works, periods.period1);
     const period2Works = filterByPeriod(result.works, periods.period2);
 
-    const countByKey = (works, keyGetter) => {
+    const countByKeys = (works, keysOf) => {
       const map = new Map();
       works.forEach(work => {
-        const key = keyGetter(work);
-        if (!key) return;
-        map.set(key, (map.get(key) || 0) + 1);
+        keysOf(work).forEach(key => {
+          if (!key) return;
+          map.set(key, (map.get(key) || 0) + 1);
+        });
       });
       return map;
     };
@@ -1472,63 +1359,38 @@
       if (work.genre) genres.push(work.genre);
       return genres;
     };
+    const countGenres = works => countByKeys(works, collectGenres);
+    const makerOf = work => work.makerName || i18n.t("makerOptionUnknown");
 
-    const countGenres = works => {
-      const map = new Map();
-      works.forEach(work => {
-        const genres = collectGenres(work);
-        if (genres.length === 0) return;
-        genres.forEach(g => {
-          map.set(g, (map.get(g) || 0) + 1);
-        });
-      });
-      return map;
-    };
-
-    const topEntries = (map, limit = 10) => {
-      return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit);
+    const drawComparison = (title, labels, map1, map2, key) => {
+      charts.drawCombinedBarChart(
+        title,
+        labels,
+        labels.map(label => map1.get(label) || 0),
+        labels.map(label => map2.get(label) || 0),
+        `${i18n.t("period1")} ${i18n.t("workCount")}`,
+        `${i18n.t("period2")} ${i18n.t("workCount")}`,
+        i18n.t("workCount"),
+        `${key}_${periodSig}`
+      );
     };
 
     if (aspects.prefType) {
       const genres1 = countGenres(period1Works);
       const genres2 = countGenres(period2Works);
-      const allGenres = new Set([...genres1.keys(), ...genres2.keys()]);
-      const labels = [...allGenres];
-      const data1 = labels.map(label => genres1.get(label) || 0);
-      const data2 = labels.map(label => genres2.get(label) || 0);
-      charts.drawCombinedBarChart(
-        i18n.t("aspectPrefType"),
-        labels,
-        data1,
-        data2,
-        `${i18n.t("period1")} ${i18n.t("workCount")}`,
-        `${i18n.t("period2")} ${i18n.t("workCount")}`,
-        i18n.t("workCount"),
-        `prefType_${periodSig}`
-      );
+      drawComparison(i18n.t("aspectPrefType"), [...new Set([...genres1.keys(), ...genres2.keys()])], genres1, genres2, "prefType");
     }
 
     if (aspects.prefMaker || aspects.makerOverall) {
-      const makers1 = countByKey(period1Works, work => work.makerName || i18n.t("makerOptionUnknown"));
-      const makers2 = countByKey(period2Works, work => work.makerName || i18n.t("makerOptionUnknown"));
+      const makers1 = countByKeys(period1Works, work => [makerOf(work)]);
+      const makers2 = countByKeys(period2Works, work => [makerOf(work)]);
       const allMakers = [...new Set([...makers1.keys(), ...makers2.keys()])];
       const combinedSorted = allMakers
         .map(maker => ({ maker, total: (makers1.get(maker) || 0) + (makers2.get(maker) || 0) }))
         .sort((a, b) => b.total - a.total);
       const topMakers = combinedSorted.slice(0, 10).map(entry => entry.maker);
       if (aspects.prefMaker && topMakers.length > 0) {
-        const data1 = topMakers.map(maker => makers1.get(maker) || 0);
-        const data2 = topMakers.map(maker => makers2.get(maker) || 0);
-        charts.drawCombinedBarChart(
-          i18n.t("aspectPrefMaker"),
-          topMakers,
-          data1,
-          data2,
-          `${i18n.t("period1")} ${i18n.t("workCount")}`,
-          `${i18n.t("period2")} ${i18n.t("workCount")}`,
-          i18n.t("workCount"),
-          `prefMaker_${periodSig}`
-        );
+        drawComparison(i18n.t("aspectPrefMaker"), topMakers, makers1, makers2, "prefMaker");
       }
 
       if (aspects.makerOverall) {
@@ -1556,7 +1418,7 @@
       const makerGenreMap = works => {
         const outer = new Map();
         works.forEach(work => {
-          const maker = work.makerName || i18n.t("makerOptionUnknown");
+          const maker = makerOf(work);
           const genres = collectGenres(work);
           if (genres.length === 0) return;
           if (!outer.has(maker)) outer.set(maker, new Map());
@@ -1729,13 +1591,7 @@
             }
           })(work));
         }
-        let makerEntry = result.makerCount.get(work.makerName);
-        if (!makerEntry) {
-          makerEntry = { count: 0, link: work.makerLink };
-          result.makerCount.set(work.makerName, makerEntry);
-        }
-        makerEntry.count++;
-        if (!makerEntry.link && work.makerLink) makerEntry.link = work.makerLink;
+        utils.bumpCount(result.makerCount, work.makerName, work.makerLink);
         result.count++;
         if (work.price > 0) result.totalPrice += work.price;
         result.works.push(work);
@@ -1745,14 +1601,7 @@
       // Count genres per work, de-duplicated (a string appearing both as the
       // top-level category and as a tag is counted once), after tags resolve.
       const recordGenre = (genre, link) => {
-        if (!genre) return;
-        let entry = result.genreCount.get(genre);
-        if (!entry) {
-          entry = { count: 0, link: link || "" };
-          result.genreCount.set(genre, entry);
-        }
-        entry.count++;
-        if (!entry.link && link) entry.link = link;
+        if (genre) utils.bumpCount(result.genreCount, genre, link);
       };
       pageWorks.forEach(work => {
         const seen = new Set();
@@ -1815,89 +1664,67 @@
   };
 
   const downloadContent = {
+    // Shared report structure so Markdown and CSV differ only in serialization.
+    _reportModel(result, exchangeRate, filteredGenreCount, filteredMakerCount, priceOf) {
+      const { groups, sortedDates } = utils.groupByDay(result.works, (acc, w) => { acc.push(w); return acc; }, () => []);
+      const priceHeader = i18n.t("priceYen", { amount: i18n.t("valueLabel") });
+      return {
+        overview: [
+          [i18n.t("purchaseTotal"), `${result.count} ${i18n.t("workCount")}`],
+          [i18n.t("totalSpent"), currencyHelper.format(result.totalPrice, exchangeRate)]
+        ],
+        genre: { header: [i18n.t("workTypeLabel"), i18n.t("workCount")], rows: filteredGenreCount.map(([name, entry]) => [name, `${entry.count}`]) },
+        maker: { header: [i18n.t("workMakerLabel"), i18n.t("workCount")], rows: filteredMakerCount.map(([name, entry]) => [name, `${entry.count}`]) },
+        eol: {
+          header: [i18n.t("purchaseDate"), i18n.t("workMakerLabel"), i18n.t("workNameLabel"), priceHeader],
+          rows: result.eol.map(eol => [eol.date, eol.makerName, eol.name, priceOf(eol.price)])
+        },
+        timeline: {
+          header: [i18n.t("workNameLabel"), i18n.t("workMakerLabel"), priceHeader],
+          groups: sortedDates.map(date => ({
+            date,
+            count: groups[date].length,
+            rows: groups[date].map(work => [work.name, work.makerName, priceOf(work.price)])
+          }))
+        }
+      };
+    },
     generateMarkdown(result, exchangeRate, filteredGenreCount, filteredMakerCount) {
-      const currencyText = currencyHelper.format(result.totalPrice, exchangeRate);
+      const model = downloadContent._reportModel(result, exchangeRate, filteredGenreCount, filteredMakerCount, amount => i18n.t("priceYen", { amount }));
+      const mdTable = (header, rows) =>
+        `| ${header.join(" | ")} |\n| ${header.map(() => "---").join(" | ")} |\n` +
+        rows.map(cells => `| ${cells.join(" | ")} |\n`).join("");
+      const section = (title, body) => `## ${title}\n\n${body}\n`;
       let md = `# ${i18n.t("downloadTitle")}\n\n`;
-      md += `## ${i18n.t("overview")}\n\n`;
-      md += `| ${i18n.t("statItem")} | ${i18n.t("valueLabel")} |\n`;
-      md += `| --- | --- |\n`;
-      md += `| ${i18n.t("purchaseTotal")} | ${result.count} ${i18n.t("workCount")} |\n`;
-      md += `| ${i18n.t("totalSpent")} | ${currencyText} |\n\n`;
-      md += `## ${i18n.t("genreRanking")}\n\n`;
-      md += `| ${i18n.t("workTypeLabel")} | ${i18n.t("workCount")} |\n`;
-      md += `| --- | --- |\n`;
-      filteredGenreCount.forEach(item => {
-          md += `| ${item[0]} | ${item[1].count} |\n`;
-      });
-      md += `\n`;
-      md += `## ${i18n.t("makerRanking")}\n\n`;
-      md += `| ${i18n.t("workMakerLabel")} | ${i18n.t("workCount")} |\n`;
-      md += `| --- | --- |\n`;
-      filteredMakerCount.forEach(item => {
-          md += `| ${item[0]} | ${item[1].count} |\n`;
-      });
-      md += `\n`;
-      md += `## ${i18n.t("eolTitle")}\n\n`;
-      if (result.eol.length > 0) {
-          md += `| ${i18n.t("purchaseDate")} | ${i18n.t("workMakerLabel")} | ${i18n.t("workNameLabel")} | ${i18n.t("priceYen", { amount: i18n.t("valueLabel") })} |\n`;
-          md += `| --- | --- | --- | --- |\n`;
-          result.eol.forEach(eol => {
-              md += `| ${eol.date} | ${eol.makerName} | ${eol.name} | ${i18n.t("priceYen", { amount: eol.price })} |\n`;
-          });
-      } else {
-          md += `${i18n.t("noEol")}\n`;
-      }
-      md += `\n`;
+      md += section(i18n.t("overview"), mdTable([i18n.t("statItem"), i18n.t("valueLabel")], model.overview));
+      md += section(i18n.t("genreRanking"), mdTable(model.genre.header, model.genre.rows));
+      md += section(i18n.t("makerRanking"), mdTable(model.maker.header, model.maker.rows));
+      md += section(i18n.t("eolTitle"), model.eol.rows.length > 0 ? mdTable(model.eol.header, model.eol.rows) : `${i18n.t("noEol")}\n`);
       md += `## ${i18n.t("timeline")}\n\n`;
-      const { groups: mdGroups, sortedDates: mdSortedDates } = utils.groupByDay(result.works, (acc, w) => { acc.push(w); return acc; }, () => []);
-      mdSortedDates.forEach(date => {
-          md += `### ${date} (${mdGroups[date].length} ${i18n.t("workCount")})\n\n`;
-          md += `| ${i18n.t("workNameLabel")} | ${i18n.t("workMakerLabel")} | ${i18n.t("priceYen", { amount: i18n.t("valueLabel") })} |\n`;
-          md += `| --- | --- | --- |\n`;
-          mdGroups[date].forEach(work => {
-              md += `| ${work.name} | ${work.makerName} | ${i18n.t("priceYen", { amount: work.price })} |\n`;
-          });
-          md += `\n`;
+      model.timeline.groups.forEach(group => {
+        md += `### ${group.date} (${group.count} ${i18n.t("workCount")})\n\n${mdTable(model.timeline.header, group.rows)}\n`;
       });
       return md;
     },
     generateCSV(result, exchangeRate, filteredGenreCount, filteredMakerCount) {
-      const currencyText = currencyHelper.format(result.totalPrice, exchangeRate);
+      const model = downloadContent._reportModel(result, exchangeRate, filteredGenreCount, filteredMakerCount, amount => `${amount}`);
+      const csvRows = rows => rows.map(cells => cells.join(",") + "\n").join("");
       let csv = "";
       csv += `${i18n.t("statItem")},${i18n.t("valueLabel")}\n`;
-      csv += `${i18n.t("purchaseTotal")},${result.count} ${i18n.t("workCount")}\n`;
-      csv += `${i18n.t("totalSpent")},${currencyText}\n\n`;
-      csv += `${i18n.t("genreRanking")}\n`;
-      csv += `${i18n.t("workTypeLabel")},${i18n.t("workCount")}\n`;
-      filteredGenreCount.forEach(item => {
-          csv += `${item[0]},${item[1].count}\n`;
-      });
+      model.overview.forEach(row => { csv += `${row[0]},${row[1]}\n`; });
       csv += "\n";
-      csv += `${i18n.t("makerRanking")}\n`;
-      csv += `${i18n.t("workMakerLabel")},${i18n.t("workCount")}\n`;
-      filteredMakerCount.forEach(item => {
-          csv += `${item[0]},${item[1].count}\n`;
-      });
+      csv += `${i18n.t("genreRanking")}\n${model.genre.header.join(",")}\n${csvRows(model.genre.rows)}`;
       csv += "\n";
-      csv += `${i18n.t("eolTitle")}\n`;
-      csv += `${i18n.t("purchaseDate")},${i18n.t("workMakerLabel")},${i18n.t("workNameLabel")},${i18n.t("priceYen", { amount: i18n.t("valueLabel") })}\n`;
-      if (result.eol.length > 0) {
-          result.eol.forEach(eol => {
-              csv += `${eol.date},${eol.makerName},${eol.name},${eol.price}\n`;
-          });
-      } else {
-          csv += `${i18n.t("noEol")}\n`;
-      }
+      csv += `${i18n.t("makerRanking")}\n${model.maker.header.join(",")}\n${csvRows(model.maker.rows)}`;
+      csv += "\n";
+      csv += `${i18n.t("eolTitle")}\n${model.eol.header.join(",")}\n`;
+      csv += model.eol.rows.length > 0 ? csvRows(model.eol.rows) : `${i18n.t("noEol")}\n`;
       csv += "\n";
       csv += `${i18n.t("timeline")}\n`;
-      const { groups: csvGroups, sortedDates: csvSortedDates } = utils.groupByDay(result.works, (acc, w) => { acc.push(w); return acc; }, () => []);
-      csvSortedDates.forEach(date => {
-          csv += `${i18n.t("dateLabel", { date })} (${csvGroups[date].length} ${i18n.t("workCount")})\n`;
-          csv += `${i18n.t("workNameLabel")},${i18n.t("workMakerLabel")},${i18n.t("priceYen", { amount: i18n.t("valueLabel") })}\n`;
-          csvGroups[date].forEach(work => {
-              csv += `${work.name},${work.makerName},${work.price}\n`;
-          });
-          csv += "\n";
+      model.timeline.groups.forEach(group => {
+        csv += `${i18n.t("dateLabel", { date: group.date })} (${group.count} ${i18n.t("workCount")})\n`;
+        csv += `${model.timeline.header.join(",")}\n${csvRows(group.rows)}`;
+        csv += "\n";
       });
       return "\ufeff" + csv;
     },
@@ -1916,37 +1743,32 @@
       return JSON.stringify(jsonObject, null, 2);
     },
     addDownloadButton(result, exchangeRate, filteredGenreCount, filteredMakerCount) {
-      const downloadBtn = document.createElement("button");
-      downloadBtn.id = "downloadBtn";
-      downloadBtn.textContent = i18n.t("download");
-      downloadBtn.className = "btn";
-      downloadBtn.style.position = "fixed";
-      downloadBtn.style.top = "10px";
-      downloadBtn.style.left = "10px";
-      downloadBtn.style.zIndex = "100001";
-      downloadBtn.setAttribute("aria-label", i18n.t("download"));
-      ui.addManagedListener(downloadBtn, "click", async () => {
-        const choice = await modal.customChoice(i18n.t("downloadFormatPrompt"), [
-          { label: i18n.t("downloadMd"), value: "md" },
-          { label: i18n.t("downloadCsv"), value: "csv" },
-          { label: i18n.t("downloadJson"), value: "json" },
-          { label: i18n.t("downloadAll"), value: "all" }
-        ]);
-        if (choice === "md" || choice === "all") {
-          const mdContent = downloadContent.generateMarkdown(result, exchangeRate, filteredGenreCount, filteredMakerCount);
-          utils.downloadFile("DLsite_Result.md", mdContent, "text/markdown");
-        }
-        if (choice === "csv" || choice === "all") {
-          const csvContent = downloadContent.generateCSV(result, exchangeRate, filteredGenreCount, filteredMakerCount);
-          utils.downloadFile("DLsite_Result.csv", csvContent, "text/csv");
-        }
-        if (choice === "json" || choice === "all") {
-          const jsonContent = downloadContent.generateJSON(result, exchangeRate, filteredGenreCount, filteredMakerCount);
-          utils.downloadFile("DLsite_Result.json", jsonContent, "application/json");
+      ui.fixedButton({
+        id: "downloadBtn",
+        text: i18n.t("download"),
+        top: "10px",
+        left: "10px",
+        onClick: async () => {
+          const choice = await modal.customChoice(i18n.t("downloadFormatPrompt"), [
+            { label: i18n.t("downloadMd"), value: "md" },
+            { label: i18n.t("downloadCsv"), value: "csv" },
+            { label: i18n.t("downloadJson"), value: "json" },
+            { label: i18n.t("downloadAll"), value: "all" }
+          ]);
+          if (choice === "md" || choice === "all") {
+            const mdContent = downloadContent.generateMarkdown(result, exchangeRate, filteredGenreCount, filteredMakerCount);
+            utils.downloadFile("DLsite_Result.md", mdContent, "text/markdown");
+          }
+          if (choice === "csv" || choice === "all") {
+            const csvContent = downloadContent.generateCSV(result, exchangeRate, filteredGenreCount, filteredMakerCount);
+            utils.downloadFile("DLsite_Result.csv", csvContent, "text/csv");
+          }
+          if (choice === "json" || choice === "all") {
+            const jsonContent = downloadContent.generateJSON(result, exchangeRate, filteredGenreCount, filteredMakerCount);
+            utils.downloadFile("DLsite_Result.json", jsonContent, "application/json");
+          }
         }
       });
-      document.body.appendChild(downloadBtn);
-      ui.trackElement(downloadBtn);
     }
   };
 
@@ -1968,6 +1790,26 @@
     trackElement(element) {
       if (element) this.trackedElements.add(element);
       return element;
+    },
+    // Create a fixed-position action button wired into the cleanup registry.
+    fixedButton({ id, text, top, left, bottom, right, background, color, zIndex = "100001", onClick }) {
+      const btn = document.createElement("button");
+      btn.id = id;
+      btn.textContent = text;
+      btn.className = "btn";
+      btn.style.position = "fixed";
+      if (top !== undefined) btn.style.top = top;
+      if (left !== undefined) btn.style.left = left;
+      if (bottom !== undefined) btn.style.bottom = bottom;
+      if (right !== undefined) btn.style.right = right;
+      if (background) btn.style.background = background;
+      if (color) btn.style.color = color;
+      btn.style.zIndex = zIndex;
+      btn.setAttribute("aria-label", text);
+      if (onClick) ui.addManagedListener(btn, "click", onClick);
+      document.body.appendChild(btn);
+      ui.trackElement(btn);
+      return btn;
     },
     injectStyles() {
       if (document.getElementById("DLsiteStyle")) return;
@@ -2300,46 +2142,37 @@
       ui.trackElement(switcher);
     },
     addCompareButton(result, exchangeRate) {
-      const compareBtn = document.createElement("button");
-      compareBtn.id = "compareBtn";
-      compareBtn.textContent = i18n.t("compare");
-      compareBtn.className = "btn";
-      compareBtn.style.position = "fixed";
-      compareBtn.style.top = "50px";
-      compareBtn.style.left = "10px";
-      compareBtn.style.zIndex = "100001";
-      compareBtn.setAttribute("aria-label", i18n.t("compare"));
-      ui.addManagedListener(compareBtn, "click", async () => {
-        let availableDates = [...new Set(result.works.map(work => utils.toDateKey(work.date)).filter(Boolean))].sort();
-        const periods = await modal.customSelectPeriods(availableDates);
-        if (periods) {
-          compareAllAspects(result, periods, exchangeRate, periods.aspects);
+      ui.fixedButton({
+        id: "compareBtn",
+        text: i18n.t("compare"),
+        top: "50px",
+        left: "10px",
+        onClick: async () => {
+          let availableDates = [...new Set(result.works.map(work => utils.toDateKey(work.date)).filter(Boolean))].sort();
+          const periods = await modal.customSelectPeriods(availableDates);
+          if (periods) {
+            compareAllAspects(result, periods, exchangeRate, periods.aspects);
+          }
         }
       });
-      document.body.appendChild(compareBtn);
-      ui.trackElement(compareBtn);
     },
     addResetButton() {
-      const resetBtn = document.createElement("button");
-      resetBtn.id = "resetBtn";
-      resetBtn.textContent = i18n.t("reset");
-      resetBtn.className = "btn";
-      resetBtn.style.position = "fixed";
-      resetBtn.style.bottom = "10px";
-      resetBtn.style.right = "10px";
-      resetBtn.style.background = "red";
-      resetBtn.style.color = "white";
-      resetBtn.style.zIndex = "100002";
-      resetBtn.setAttribute("aria-label", i18n.t("reset"));
-      ui.addManagedListener(resetBtn, "click", () => {
-        cleanup();
-        const injectedStyle = document.getElementById("DLsiteStyle");
-        if (injectedStyle && injectedStyle.parentNode) {
-          injectedStyle.parentNode.removeChild(injectedStyle);
+      ui.fixedButton({
+        id: "resetBtn",
+        text: i18n.t("reset"),
+        bottom: "10px",
+        right: "10px",
+        background: "red",
+        color: "white",
+        zIndex: "100002",
+        onClick: () => {
+          cleanup();
+          const injectedStyle = document.getElementById("DLsiteStyle");
+          if (injectedStyle && injectedStyle.parentNode) {
+            injectedStyle.parentNode.removeChild(injectedStyle);
+          }
         }
       });
-      document.body.appendChild(resetBtn);
-      ui.trackElement(resetBtn);
     }
   };
 
@@ -2445,23 +2278,18 @@
     } else {
       exchangeRate = 1;
     }
-    const cancelBtn = document.createElement("button");
-    cancelBtn.id = "cancelBtn";
-    cancelBtn.textContent = i18n.t("cancel");
-    cancelBtn.className = "btn";
-    cancelBtn.style.position = "fixed";
-    cancelBtn.style.top = "90px";
-    cancelBtn.style.left = "10px";
-    cancelBtn.style.zIndex = "100001";
-    cancelBtn.style.background = "#e53935";
-    cancelBtn.setAttribute("aria-label", i18n.t("cancel"));
-    ui.addManagedListener(cancelBtn, "click", () => {
-      appState.aborted = true;
-      cancelBtn.disabled = true;
-      cancelBtn.style.opacity = "0.6";
+    const cancelBtn = ui.fixedButton({
+      id: "cancelBtn",
+      text: i18n.t("cancel"),
+      top: "90px",
+      left: "10px",
+      background: "#e53935",
+      onClick: () => {
+        appState.aborted = true;
+        cancelBtn.disabled = true;
+        cancelBtn.style.opacity = "0.6";
+      }
     });
-    document.body.appendChild(cancelBtn);
-    ui.trackElement(cancelBtn);
 
     console.group(`📄 ${i18n.t("progressGroup")}`);
     const result = await dataProcessor.fetchAllPages(dlurl, detailMode, (currentBatch, totalBatches) => {
@@ -2520,7 +2348,7 @@
   const displayResults = (result, exchangeRate, filteredGenreCount, filteredMakerCount, excludeThreshold = 0) => {
     const container = charts.createChartContainer("resultWindow", "200px", "200px", "1000px", "800px", i18n.t("filterTitle"));
     const contentDiv = container.querySelector(".chart-content");
-    while (contentDiv.firstChild) contentDiv.removeChild(contentDiv.firstChild);
+    utils.clearChildren(contentDiv);
 
     const createTable = (headers, rows) => {
       const table = document.createElement("table");
@@ -2547,17 +2375,63 @@
       return table;
     };
 
+    const rankingRows = (entries) => entries.map(([name, entry]) => {
+      const cell = document.createElement("span");
+      cell.textContent = name;
+      if (entry.link) {
+        const link = document.createElement("a");
+        link.href = entry.link;
+        link.target = "_blank";
+        link.style.marginLeft = "5px";
+        link.style.fontSize = "12px";
+        link.textContent = i18n.t("jumpText");
+        cell.appendChild(link);
+      }
+      return [cell, `${entry.count}`];
+    });
+    const renderRanking = (content, entries, headers, emptyMessage) => {
+      content.innerHTML = "";
+      if (entries.length === 0) {
+        const empty = document.createElement("p");
+        empty.textContent = emptyMessage;
+        content.appendChild(empty);
+      } else {
+        content.appendChild(createTable(headers, rankingRows(entries)));
+      }
+    };
+
+    const makeInput = (type, placeholder, flex) => {
+      const input = document.createElement("input");
+      input.type = type;
+      if (placeholder) {
+        input.placeholder = placeholder;
+        input.setAttribute("aria-label", placeholder);
+      }
+      input.style.flex = flex;
+      return input;
+    };
+    const makeButton = (text, flex) => {
+      const btn = document.createElement("button");
+      btn.textContent = text;
+      btn.className = "btn";
+      btn.style.flex = flex;
+      btn.setAttribute("aria-label", text);
+      return btn;
+    };
+
     const filterForm = document.createElement("div");
     filterForm.style.display = "flex";
     filterForm.style.flexWrap = "wrap";
     filterForm.style.gap = "10px";
     filterForm.style.marginBottom = "10px";
 
-    const keywordInput = document.createElement("input");
-    keywordInput.type = "text";
-    keywordInput.placeholder = i18n.t("keywordPlaceholder");
-    keywordInput.setAttribute("aria-label", i18n.t("keywordPlaceholder"));
-    keywordInput.style.flex = "1";
+    const keywordInput = makeInput("text", i18n.t("keywordPlaceholder"), "1");
+    const startDateInput = makeInput("date", null, "0 0 160px");
+    const endDateInput = makeInput("date", null, "0 0 160px");
+    const minPriceInput = makeInput("number", i18n.t("minPrice"), "0 0 120px");
+    const maxPriceInput = makeInput("number", i18n.t("maxPrice"), "0 0 120px");
+    const applyFilterBtn = makeButton(i18n.t("applyFilters"), "0 0 100px");
+    const redrawChartsBtn = makeButton(i18n.t("redrawCharts"), "1 1 200px");
 
     const makerSelect = document.createElement("select");
     const allOption = document.createElement("option");
@@ -2572,36 +2446,6 @@
       makerSelect.appendChild(option);
     });
 
-    const startDateInput = document.createElement("input");
-    startDateInput.type = "date";
-    startDateInput.style.flex = "0 0 160px";
-    const endDateInput = document.createElement("input");
-    endDateInput.type = "date";
-    endDateInput.style.flex = "0 0 160px";
-
-    const minPriceInput = document.createElement("input");
-    minPriceInput.type = "number";
-    minPriceInput.placeholder = i18n.t("minPrice");
-    minPriceInput.setAttribute("aria-label", i18n.t("minPrice"));
-    minPriceInput.style.flex = "0 0 120px";
-    const maxPriceInput = document.createElement("input");
-    maxPriceInput.type = "number";
-    maxPriceInput.placeholder = i18n.t("maxPrice");
-    maxPriceInput.setAttribute("aria-label", i18n.t("maxPrice"));
-    maxPriceInput.style.flex = "0 0 120px";
-
-    const applyFilterBtn = document.createElement("button");
-    applyFilterBtn.textContent = i18n.t("applyFilters");
-    applyFilterBtn.className = "btn";
-    applyFilterBtn.style.flex = "0 0 100px";
-    applyFilterBtn.setAttribute("aria-label", i18n.t("applyFilters"));
-
-    const redrawChartsBtn = document.createElement("button");
-    redrawChartsBtn.textContent = i18n.t("redrawCharts");
-    redrawChartsBtn.className = "btn";
-    redrawChartsBtn.style.flex = "1 1 200px";
-    redrawChartsBtn.setAttribute("aria-label", i18n.t("redrawCharts"));
-
     filterForm.appendChild(keywordInput);
     filterForm.appendChild(makerSelect);
     filterForm.appendChild(startDateInput);
@@ -2612,22 +2456,17 @@
     filterForm.appendChild(redrawChartsBtn);
     contentDiv.appendChild(filterForm);
 
-    const overviewContent = document.createElement("div");
-    const genreContent = document.createElement("div");
-    const makerContent = document.createElement("div");
-    const eolContent = document.createElement("div");
+    const addSection = (title, collapsed = false) => {
+      const content = document.createElement("div");
+      contentDiv.appendChild(ui.createCollapsibleSection(title, content, collapsed));
+      return content;
+    };
+    const overviewContent = addSection(i18n.t("overview"));
+    const genreContent = addSection(i18n.t("genreRanking"));
+    const makerContent = addSection(i18n.t("makerRanking"));
+    const eolContent = addSection(i18n.t("eolTitle"));
     const timelineContent = document.createElement("div");
-
-    const overviewSection = ui.createCollapsibleSection(i18n.t("overview"), overviewContent, false);
-    const genreSection = ui.createCollapsibleSection(i18n.t("genreRanking"), genreContent, false);
-    const makerSection = ui.createCollapsibleSection(i18n.t("makerRanking"), makerContent, false);
-    const eolSection = ui.createCollapsibleSection(i18n.t("eolTitle"), eolContent, false);
     const timelineSection = ui.createCollapsibleSection(i18n.t("timeline"), timelineContent, true);
-
-    contentDiv.appendChild(overviewSection);
-    contentDiv.appendChild(genreSection);
-    contentDiv.appendChild(makerSection);
-    contentDiv.appendChild(eolSection);
     contentDiv.appendChild(timelineSection);
 
     const authorContainer = document.createElement("div");
@@ -2668,11 +2507,7 @@
       const addGenre = (genre) => {
         if (!genre) return;
         const originEntry = genreLinkIndex.get(genre);
-        const link = originEntry && originEntry.link ? originEntry.link : "";
-        const existing = genreMap.get(genre) || { count: 0, link };
-        existing.count++;
-        if (!existing.link && link) existing.link = link;
-        genreMap.set(genre, existing);
+        utils.bumpCount(genreMap, genre, originEntry && originEntry.link ? originEntry.link : "");
       };
 
       works.forEach(work => {
@@ -2687,11 +2522,7 @@
         addUniqueGenre(work.genre);
         if (Array.isArray(work.mainGenre)) work.mainGenre.forEach(addUniqueGenre);
         const makerOrigin = makerLinkIndex.get(work.makerName);
-        const makerLink = makerOrigin && makerOrigin.link ? makerOrigin.link : "";
-        const makerEntry = makerMap.get(work.makerName) || { count: 0, link: makerLink };
-        makerEntry.count++;
-        if (!makerEntry.link && makerLink) makerEntry.link = makerLink;
-        makerMap.set(work.makerName, makerEntry);
+        utils.bumpCount(makerMap, work.makerName, makerOrigin && makerOrigin.link ? makerOrigin.link : "");
       });
 
       const genreArray = [...genreMap.entries()].sort((a, b) => b[1].count - a[1].count);
@@ -2756,53 +2587,9 @@
       );
       overviewContent.appendChild(overviewTable);
 
-      genreContent.innerHTML = "";
-      if (genreCountArr.length === 0) {
-        const empty = document.createElement("p");
-        empty.textContent = i18n.t("noGenreData");
-        genreContent.appendChild(empty);
-      } else {
-        const genreRows = genreCountArr.map(([type, entry]) => {
-          const cellContainer = document.createElement("span");
-          cellContainer.textContent = type;
-          if (entry.link) {
-            const link = document.createElement("a");
-            link.href = entry.link;
-            link.target = "_blank";
-            link.style.marginLeft = "5px";
-            link.style.fontSize = "12px";
-            link.textContent = i18n.t("jumpText");
-            cellContainer.appendChild(link);
-          }
-          return [cellContainer, `${entry.count}`];
-        });
-        const genreTable = createTable([i18n.t("workTypeLabel"), i18n.t("workCount")], genreRows);
-        genreContent.appendChild(genreTable);
-      }
+      renderRanking(genreContent, genreCountArr, [i18n.t("workTypeLabel"), i18n.t("workCount")], i18n.t("noGenreData"));
 
-      makerContent.innerHTML = "";
-      if (makerCountArr.length === 0) {
-        const empty = document.createElement("p");
-        empty.textContent = i18n.t("noMakerData");
-        makerContent.appendChild(empty);
-      } else {
-        const makerRows = makerCountArr.map(([maker, entry]) => {
-          const cellContainer = document.createElement("span");
-          cellContainer.textContent = maker;
-          if (entry.link) {
-            const link = document.createElement("a");
-            link.href = entry.link;
-            link.target = "_blank";
-            link.style.marginLeft = "5px";
-            link.style.fontSize = "12px";
-            link.textContent = i18n.t("jumpText");
-            cellContainer.appendChild(link);
-          }
-          return [cellContainer, `${entry.count}`];
-        });
-        const makerTable = createTable([i18n.t("workMakerLabel"), i18n.t("workCount")], makerRows);
-        makerContent.appendChild(makerTable);
-      }
+      renderRanking(makerContent, makerCountArr, [i18n.t("workMakerLabel"), i18n.t("workCount")], i18n.t("noMakerData"));
 
       eolContent.innerHTML = "";
       const eolWorks = works.filter(work => !work.url);
